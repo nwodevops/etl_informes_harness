@@ -1,0 +1,8 @@
+# Manifiesto de fuentes STG.
+# RData: DDL canónico vía python/introspect/rdata.py; filas vía python/stage_rdata.py.
+
+sources:
+  - stg_table: STG_INF_CONSOL
+    type: rdata
+    path: input/input_rdata
+    glob: "*.RData"

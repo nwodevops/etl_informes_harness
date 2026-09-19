@@ -1,0 +1,30 @@
+"""Paquete RData: schema (contrato) + map (adapter staging)."""
+
+from rdata.map import (  # noqa: F401
+    DIRECT_COLS,
+    EQUIV,
+    map_to_canonical,
+    normalize_colname,
+    normalize_frame_columns,
+    parse_anio_from_name,
+    parse_fuente_from_name,
+    parse_mes_corte_from_name,
+)
+from rdata.schema import (  # noqa: F401
+    CANONICAL,
+    CANONICAL_NAMES,
+    CLOB_COLS,
+    COLUMN_COMMENTS,
+    CORE,
+    DATE_COLS,
+    EXTRAS,
+    EXTRAS_BD,
+    EXTRAS_EQUIV,
+    EXTRAS_OD,
+    EXTRAS_QA,
+    NUMBER_COLS,
+    PROVENANCE,
+    TABLE_COMMENT,
+    oracle_comment_statements,
+    oracle_ddl,
+)

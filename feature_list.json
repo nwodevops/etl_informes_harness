@@ -1,0 +1,45 @@
+{
+  "project": "etl_informes_harness",
+  "reglas": {
+    "una_feature_activa": "Como máximo un item con status in_progress",
+    "verificacion": "./init.sh debe terminar en HARNESS OK",
+    "trazabilidad": "Implementador escribe progress/impl_<id>.md"
+  },
+  "features": [
+    {
+      "id": "fase-1-entorno",
+      "title": "Hop + H2 + Python + harness",
+      "status": "done",
+      "criterio": "CHECKPOINTS.md#fase-1",
+      "doc": "README.md"
+    },
+    {
+      "id": "fase-2-rdata-stg",
+      "title": "RData → STG_INF_CONSOL (mapa canónico)",
+      "status": "done",
+      "criterio": "inputs.yaml type rdata + stage_rdata.py carga H2",
+      "doc": "docs/rdata_column_map.md"
+    },
+    {
+      "id": "fase-3-oracle-consol",
+      "title": "Consolidado → DW.APP.INF_CONSOL_RDATA",
+      "status": "done",
+      "criterio": "COUNT(*) Oracle ≈ suma filas RData; desglose FUENTE/ANIO",
+      "doc": "docs/rdata_column_map.md"
+    },
+    {
+      "id": "fase-4-schema-gradual-2026",
+      "title": "Estructura gradual anclada a esquema 2025/2026",
+      "status": "done",
+      "criterio": "80 cols; MES_CORTE; Agosto 2026 en conteos; extras BD/OD en vigente",
+      "doc": "docs/rdata_column_map.md"
+    },
+    {
+      "id": "fase-5-union-vigente-2026",
+      "title": "Cerrar unión BD∪OD vigente (ESTADO + roles)",
+      "status": "done",
+      "criterio": "83 cols; ESTADO/ANALISTA_LEGAL/RESPONSABLE_COMISION en BD 2026; fuera N°/USUARIO/INF_EVAL",
+      "doc": "docs/rdata_column_map.md"
+    }
+  ]
+}

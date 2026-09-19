@@ -1,0 +1,16 @@
+# MySQL (gappsdb) — tablas de interés
+
+Lista de tablas (sin credenciales; ver `docs/credenciales/` local, no versionado):
+
+- T_MVC_INFORME_HEC
+- T_MAP_COMPONENTE_HEC
+- T_MAP_MES
+- T_MAP_UNIDAD_FISCALIZABLE
+- T_MVC_ADMUF_HEC
+- T_MVC_COMPONENTES_HEC
+- T_MVC_DOCUMENTOS_HEC
+- T_MVC_HECHOS_HEC
+- T_MVC_MECANISMOS_HEC
+- T_MVC_MECANISMOS_OBLIGACION_HEC
+- T_MVC_OBLIGACIONES_HEC
+- T_MVC_INFORMACIONMEDIDAS_MED
