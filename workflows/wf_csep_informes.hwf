@@ -2,7 +2,7 @@
 <workflow>
   <name>wf_csep_informes</name>
   <name_sync_with_filename>Y</name_sync_with_filename>
-  <description>CSEP_INFORMES_VIEW → CSEP_INFORMES (DDL Python + pipeline Hop). Independiente de wf_main / init.sh.</description>
+  <description>Vista SISUD CSEP_INFORMES_VIEW → tabla oracle_dw DW_INF_CSEP_INFORMES_VIEW (DDL Python + pipeline Hop).</description>
   <extended_description/>
   <created_user>-</created_user>
   <modified_user>-</modified_user>
@@ -50,8 +50,8 @@ PY=python3
 [ -x .venv/bin/python ] &amp;&amp; PY=.venv/bin/python
 "$PY" python/ddl_csep_informes.py
 </script>
-      <name>DDL CSEP_INFORMES</name>
-      <description>DROP+CREATE CSEP_INFORMES en oracle_dw desde columnas de la vista</description>
+      <name>DDL DW_INF_CSEP_INFORMES_VIEW</name>
+      <description>DROP+CREATE DW_INF_CSEP_INFORMES_VIEW en oracle_dw desde columnas de la vista</description>
       <type>SHELL</type>
       <attributes/>
       <xloc>224</xloc>
@@ -61,7 +61,7 @@ PY=python3
     </action>
     <action>
       <name>pl_csep_informes</name>
-      <description>TableInput vista → TableOutput CSEP_INFORMES</description>
+      <description>TableInput vista → TableOutput DW_INF_CSEP_INFORMES_VIEW</description>
       <type>PIPELINE</type>
       <attributes/>
       <add_date>N</add_date>
@@ -101,13 +101,13 @@ PY=python3
   <hops>
     <hop>
       <from>Start</from>
-      <to>DDL CSEP_INFORMES</to>
+      <to>DDL DW_INF_CSEP_INFORMES_VIEW</to>
       <evaluation>Y</evaluation>
       <unconditional>Y</unconditional>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>DDL CSEP_INFORMES</from>
+      <from>DDL DW_INF_CSEP_INFORMES_VIEW</from>
       <to>pl_csep_informes</to>
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>

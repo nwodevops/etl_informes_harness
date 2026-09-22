@@ -167,8 +167,34 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    import argparse as _ap
+
+    _p = _ap.ArgumentParser(add_help=False)
+    _p.add_argument("--soft", action="store_true")
+    _known, _rest = _p.parse_known_args()
     try:
-        raise SystemExit(main())
-    except (FileNotFoundError, ValueError, KeyError, RuntimeError) as exc:
+        rc = main(_rest if _rest else None)
+        raise SystemExit(rc)
+    except SystemExit as exc:
+        code = exc.code
+        if code is None:
+            code = 0
+        elif not isinstance(code, int):
+            code = 1
+        if code != 0 and _known.soft:
+            print(
+                f"AVISO: stage_mysql falló (soft); "
+                f"STG_INF_CONSOL_FORM queda vacío ({exc})",
+                flush=True,
+            )
+            raise SystemExit(0)
+        raise
+    except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
+        if _known.soft:
+            print(
+                "AVISO: stage_mysql falló (soft); STG_INF_CONSOL_FORM queda vacío",
+                flush=True,
+            )
+            raise SystemExit(0)
         raise SystemExit(1)

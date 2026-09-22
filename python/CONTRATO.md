@@ -37,7 +37,9 @@ python/main.py
 | Nombre | Destino Oracle | Descripción |
 |---|---|---|
 | `RESULTADO` | `APP.DW_INF_CONSOL_RDATA` | Consolidado RData + `FG_SIN_INFORME` |
-| `RESULTADO_FORM` | `APP.DW_INF_CONSOL_FORM` | Passthrough SQL MySQL (canónico) |
+| `RESULTADO_FORM` | `APP.DW_INF_CONSOL_FORM` | Passthrough SQL MySQL; **siempre** se escribe (0 filas si MySQL cae) |
+
+Tras `main` / `wf_main`, oracle_dw debe tener también `DW_INF_CSEP_INFORMES_VIEW` (DDL+Hop/load).
 
 Opcional: `QA_RESUMEN`, `QA_RESUMEN_FORM` (conteos por `FUENTE`/`ANIO`).
 

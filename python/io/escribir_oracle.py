@@ -149,16 +149,17 @@ def escribir_oracle(
         )
 
         cols = list(df.columns)
-        placeholders = ", ".join([f":{i + 1}" for i in range(len(cols))])
-        col_sql = ", ".join(cols)
-        sql = f"INSERT INTO {schema}.{table} ({col_sql}) VALUES ({placeholders})"
+        if cols and len(df):
+            placeholders = ", ".join([f":{i + 1}" for i in range(len(cols))])
+            col_sql = ", ".join(cols)
+            sql = f"INSERT INTO {schema}.{table} ({col_sql}) VALUES ({placeholders})"
 
-        rows = []
-        for tup in df.itertuples(index=False, name=None):
-            rows.append(tuple(_coerce(v, c) for c, v in zip(cols, tup)))
+            rows = []
+            for tup in df.itertuples(index=False, name=None):
+                rows.append(tuple(_coerce(v, c) for c, v in zip(cols, tup)))
 
-        if rows:
-            cur.executemany(sql, rows, batcherrors=False)
+            if rows:
+                cur.executemany(sql, rows, batcherrors=False)
         conn.commit()
 
         cur.execute(f"SELECT COUNT(*) FROM {schema}.{table}")
@@ -173,13 +174,16 @@ def escribir_oracle(
                 f"Conteo Oracle {n_bd} != DataFrame {len(df)} — carga incompleta"
             )
 
-        # Desglose
-        cur.execute(
-            f"SELECT FUENTE, ANIO, COUNT(*) FROM {schema}.{table} "
-            f"GROUP BY FUENTE, ANIO ORDER BY FUENTE, ANIO"
-        )
-        for fuente, anio, n in cur.fetchall():
-            print(f"DW:   {fuente} {anio}: {n}", flush=True)
+        # Desglose (tablas canónicas con FUENTE/ANIO)
+        if n_bd and cols and "FUENTE" in cols and "ANIO" in cols:
+            cur.execute(
+                f"SELECT FUENTE, ANIO, COUNT(*) FROM {schema}.{table} "
+                f"GROUP BY FUENTE, ANIO ORDER BY FUENTE, ANIO"
+            )
+            for fuente, anio, n in cur.fetchall():
+                print(f"DW:   {fuente} {anio}: {n}", flush=True)
+        elif n_bd == 0:
+            print(f"DW:   (tabla vacía)", flush=True)
 
         cur.close()
         return n_bd
