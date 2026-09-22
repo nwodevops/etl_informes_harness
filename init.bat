@@ -3,13 +3,12 @@ REM ===========================================================================
 REM init.bat — Harness Windows (equivalente a init.sh).
 REM Debe terminar en "HARNESS OK". Criterios: CHECKPOINTS.md
 REM Uso: init.bat [local|remote]    (default: remote)
+REM Destino: DW_INF_CONSOL_RDATA + DW_INF_CONSOL_FORM + DW_INF_CSEP_INFORMES_VIEW
 REM ===========================================================================
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
-set "RC_FILE=%~dp0feature_list.json"
 set "H2_JAR=%~dp0h2\lib\h2-2.4.240.jar"
-if not exist "%H2_JAR%" set "H2_JAR=%H2_JAR%"
 
 set "ENV=%~1"
 if "%ENV%"=="" set "ENV=remote"
@@ -50,7 +49,6 @@ if errorlevel 1 (
 REM ---- Rscript (suele no estar en PATH; se agrega su dir al PATH) ----
 where Rscript >nul 2>&1
 if errorlevel 1 (
-  REM Buscar instalacion estandar de R
   for /d %%d in ("C:\Program Files\R\R-*") do (
     if exist "%%d\bin\Rscript.exe" set "PATH=%%d\bin;%PATH%"
   )
@@ -88,7 +86,7 @@ if errorlevel 1 (
 )
 
 REM ---- Stage RData ----
-echo ==^> Stage RData  -^> STG_INF_CONSOL
+echo ==^> Stage RData -^> STG_INF_CONSOL
 set "PATH=%PATH%;%~dp0h2\scripts"
 "%PY%" python\stage_rdata.py
 if errorlevel 1 (
@@ -96,44 +94,54 @@ if errorlevel 1 (
   exit /b 1
 )
 
-REM ---- Stage MySQL  -^> STG_INF_CONSOL_FORM ----
-echo ==^> Stage MySQL  -^> STG_INF_CONSOL_FORM
-"%PY%" python\stage_mysql.py
+REM ---- Stage MySQL soft ----
+echo ==^> Stage MySQL -^> STG_INF_CONSOL_FORM ^(soft^)
+"%PY%" python\stage_mysql.py --soft
 if errorlevel 1 (
-  echo FAIL: stage_mysql.py
+  echo FAIL: stage_mysql.py --soft
   exit /b 1
 )
 
-REM ---- Python main (Oracle DW) ----
-echo ==^> Python main (Oracle DW_INF_CONSOL_RDATA + DW_INF_CONSOL_FORM)
+REM ---- Python main (siempre RDATA + FORM) ----
+echo ==^> Python main ^(DW_INF_CONSOL_RDATA + DW_INF_CONSOL_FORM siempre^)
 set "LOG=%TEMP%\init_harness_main.log"
 "%PY%" python\main.py > "%LOG%" 2>&1
 set "MAIN_RC=!ERRORLEVEL!"
+type "%LOG%"
 if not "!MAIN_RC!"=="0" (
   echo FAIL: python\main.py termino con codigo !MAIN_RC!
-  powershell -NoProfile -Command "Get-Content '%LOG%' -Tail 40"
   exit /b 1
 )
 
-echo ==^> Comprobando salidas
+REM ---- CSEP soft + load ----
+echo ==^> CSEP_INFORMES_VIEW -^> DW_INF_CSEP_INFORMES_VIEW ^(soft + load^)
+"%PY%" python\ddl_csep_informes.py --load --soft >> "%LOG%" 2>&1
+set "CSEP_RC=!ERRORLEVEL!"
+type "%LOG%" | findstr /C:"Destino:" /C:"AVISO:" /C:"ERROR:" /C:"Fuente:"
+if not "!CSEP_RC!"=="0" (
+  echo FAIL: ddl_csep_informes.py termino con codigo !CSEP_RC!
+  exit /b 1
+)
+
+echo ==^> Comprobando salidas ^(3 tablas destino^)
 findstr /C:"Salida RESULTADO" "%LOG%" >nul
 if errorlevel 1 (
   echo FAIL: no hay Salida RESULTADO en el log
   exit /b 1
 )
-findstr /C:"DW:" /C:"DW_INF_CONSOL_RDATA" "%LOG%" >nul
+findstr /C:"DW_INF_CONSOL_RDATA" "%LOG%" >nul
 if errorlevel 1 (
   echo FAIL: no hay carga Oracle DW_INF_CONSOL_RDATA en el log
   exit /b 1
 )
-findstr /C:"Salida RESULTADO_FORM" "%LOG%" >nul
-if errorlevel 1 (
-  echo FAIL: no hay Salida RESULTADO_FORM en el log
-  exit /b 1
-)
-findstr /C:"DW:" /C:"DW_INF_CONSOL_FORM" "%LOG%" >nul
+findstr /C:"DW_INF_CONSOL_FORM" "%LOG%" >nul
 if errorlevel 1 (
   echo FAIL: no hay carga Oracle DW_INF_CONSOL_FORM en el log
+  exit /b 1
+)
+findstr /C:"Destino: CREATE DW_INF_CSEP_INFORMES_VIEW" "%LOG%" >nul
+if errorlevel 1 (
+  echo FAIL: no hay CREATE DW_INF_CSEP_INFORMES_VIEW en el log
   exit /b 1
 )
 findstr /C:"Excel:" "%LOG%" >nul
@@ -146,5 +154,5 @@ if not errorlevel 1 (
 )
 
 echo.
-echo [GREEN]HARNESS OK[RESET] - ver CHECKPOINTS.md
+echo HARNESS OK — 3 tablas: DW_INF_CONSOL_RDATA, DW_INF_CONSOL_FORM, DW_INF_CSEP_INFORMES_VIEW
 exit /b 0

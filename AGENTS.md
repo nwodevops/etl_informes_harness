@@ -20,22 +20,36 @@ ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md
 
 ## Inicio rápido
 
+**Linux**
+
 ```bash
 ./switch-env.sh local
 ./init.sh
 ~/apps/hop/hop-gui.sh   # → wf_main.hwf
 ```
 
-**Windows** (el repo trae ambos): `.\switch-env.ps1 local|remote` (genera `project-config.json` si falta) y H2 vía `h2/scripts/*.bat` (server como **tarea programada** `H2_SERVICE_MEM_CSEP`, NO se para desde el workflow). Correr `init.bat [local|remote]` (default `remote`). `init.bat` agrega `Rscript` al PATH desde `C:\Program Files\R\R-*`. Hop Windows en `D:\Eder\hop` (`hop-gui.bat`, `hop-run.bat`); el workflow Windows es [`workflows/wf_main_windows.hwf`](workflows/wf_main_windows.hwf). `switch-env.ps1` no pisa valores reales ya presentes en `project-config.json` si la plantilla trae placeholders `<...>`.
+**Windows**
 
-`init.sh` solo corre desde Git Bash/WSL; ahí `.venv/bin/python` no existe (el venv es `.venv\Scripts\python.exe`), así que el script cae a `python3` del PATH y requiere las deps globales.
+```powershell
+.\switch-env.ps1 local   # o remote
+.\init.bat               # default remote; o: init.bat local
+# Hop GUI → workflows\wf_main_windows.hwf
+```
 
-## Verificación: no es offline
+- Python: `.venv\Scripts\python.exe`
+- H2: `h2\scripts\reset_and_create.bat` (servicio/tarea `H2_SERVICE_MEM_CSEP` según scripts bat)
+- `Rscript`: se busca en `C:\Program Files\R\R-*` si no está en PATH
+- `switch-env.ps1` no pisa valores reales de `project-config.json` si la plantilla trae placeholders `<...>`
 
-`init.sh`/`init.bat` validan `java` + `h2/lib/h2-2.4.240.jar` + `.venv/` con `pyyaml pandas jaydebeapi pymysql` + **Rscript**, y corren `create_stg.py` → `stage_rdata.py` → `stage_mysql.py` → `main.py`.
+## Verificación
 
-- Necesita BD vivas: `stage_mysql.py` lee **MySQL HEC** (gappsdb) y `main.py` escribe **Oracle DW**. En el entorno `remote` real: MySQL **10.1.1.217:3306** (la IP pública 209.45.104.78 NO responde desde esta red) y Oracle **10.6.0.15:1532/dvoefacore**, usuario **REPOCSEP** (las tablas quedan en esquema `REPOCSEP`, no `APP`). Con creds placeholder `<...>` → falla con `require_live_conn`.
-- Falla si el log tiene `${VAR}` literal (variable Hop sin resolver = bug).
+`init.sh` / `init.bat` → **HARNESS OK** con **3 tablas** en oracle_dw:
+
+1. `DW_INF_CONSOL_RDATA`
+2. `DW_INF_CONSOL_FORM` (siempre; vacía si MySQL cae)
+3. `DW_INF_CSEP_INFORMES_VIEW` (stub vacío si SISUD cae)
+
+Requiere Java, jar H2, `.venv` (`pyyaml pandas jaydebeapi pymysql`), **Rscript**, y Oracle DW vivo. MySQL/SISUD van en modo soft.
 
 ## Reglas críticas
 
@@ -56,7 +70,12 @@ ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md
 `inputs.yaml` → `create_stg.py` → `stage_rdata.py` / `stage_mysql.py --soft` → `main.py` → `ddl_csep_informes.py` + pipeline Hop.  
 Mapa RData: [`docs/rdata_column_map.md`](docs/rdata_column_map.md). SQL HEC: [`input/input_mysql/`](input/input_mysql/).
 
-**Windows:** el workflow usa SHELL en bash (solo Linux); la variante Windows es [`workflows/wf_csep_informes_windows.hwf`](workflows/wf_csep_informes_windows.hwf) (SHELL en cmd → `python\ddl_csep_informes.py` con `.venv\Scripts\python.exe`). `ddl_csep_informes.py` es Python puro + oracledb (thin; su `init_oracle_client()` falla silencioso si no hay Instant Client) — verificado en esta PC: `SISUD.CSEP_INFORMES_VIEW` (57 cols) → `CREATE CSEP_INFORMES` en `REPOCSEP`.
+| OS | Harness | Workflow Hop |
+|---|---|---|
+| Linux | [`init.sh`](init.sh) | [`workflows/wf_main.hwf`](workflows/wf_main.hwf) |
+| Windows | [`init.bat`](init.bat) | [`workflows/wf_main_windows.hwf`](workflows/wf_main_windows.hwf) |
+
+CSEP solo: [`wf_csep_informes.hwf`](workflows/wf_csep_informes.hwf) / [`wf_csep_informes_windows.hwf`](workflows/wf_csep_informes_windows.hwf).
 
 ## Nuevo proyecto
 
