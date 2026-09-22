@@ -22,7 +22,7 @@
     },
     {
       "id": "fase-3-oracle-consol",
-      "title": "Consolidado → DW.APP.INF_CONSOL_RDATA",
+      "title": "Consolidado → APP.DW_INF_CONSOL_RDATA",
       "status": "done",
       "criterio": "COUNT(*) Oracle ≈ suma filas RData; desglose FUENTE/ANIO",
       "doc": "docs/rdata_column_map.md"
@@ -40,6 +40,13 @@
       "status": "done",
       "criterio": "83 cols; ESTADO/ANALISTA_LEGAL/RESPONSABLE_COMISION en BD 2026; fuera N°/USUARIO/INF_EVAL",
       "doc": "docs/rdata_column_map.md"
+    },
+    {
+      "id": "fase-6-mysql-form",
+      "title": "MySQL HEC → APP.DW_INF_CONSOL_FORM",
+      "status": "done",
+      "criterio": "STG_INF_CONSOL_FORM + DW_INF_CONSOL_FORM; RData sigue en DW_INF_CONSOL_RDATA; init.sh HARNESS OK",
+      "doc": "input/input_mysql/README.md"
     }
   ]
 }

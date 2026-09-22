@@ -5,7 +5,8 @@ Lo llama Hop (acción Shell previa al stage) o el harness antes de cargar datos.
 CAPA STG/DDL — no importar python/io ni logica/.
 
 Flujo:
-  inputs.yaml → introspect (oracle|sheets|excel|rdata) → CREATE TABLE STG_* en H2
+  inputs.yaml → introspect (oracle|sheets|excel|rdata|mysql) → CREATE TABLE STG_* en H2
+
 
 Uso (H2 ya levantado tras Reset):
   .venv/bin/python python/create_stg.py
@@ -24,7 +25,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 from config import load_sources, load_vars, project_root, require_live_conn  # noqa: E402
-from introspect import excel, oracle, rdata, sheets  # noqa: E402
+from introspect import excel, mysql, oracle, rdata, sheets  # noqa: E402
 from introspect.h2_ddl import apply_h2, create_table_sql, write_script  # noqa: E402
 
 # type en inputs.yaml → función que deduce columnas del origen
@@ -33,6 +34,7 @@ HANDLERS = {
     "sheets": sheets.introspect,
     "excel": excel.introspect,
     "rdata": rdata.introspect,
+    "mysql": mysql.introspect,
 }
 
 

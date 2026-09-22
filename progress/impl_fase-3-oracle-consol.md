@@ -2,7 +2,7 @@
 
 ## Qué
 
-Consolidar 14 RData (BD+OD 2019–2025) → `APP.INF_CONSOL_RDATA` vía mapa canónico.
+Consolidar 14 RData (BD+OD 2019–2025) → `APP.DW_INF_CONSOL_RDATA` vía mapa canónico.
 
 ## Cómo
 

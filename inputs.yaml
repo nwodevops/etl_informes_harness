@@ -1,8 +1,14 @@
 # Manifiesto de fuentes STG.
 # RData: DDL canónico vía python/introspect/rdata.py; filas vía python/stage_rdata.py.
+# MySQL HEC: DDL canónico vía python/introspect/mysql.py; filas vía python/stage_mysql.py.
 
 sources:
   - stg_table: STG_INF_CONSOL
     type: rdata
     path: input/input_rdata
     glob: "*.RData"
+
+  - stg_table: STG_INF_CONSOL_FORM
+    type: mysql
+    sql_path: input/input_mysql/vw_inf_consol_simil.sql
+

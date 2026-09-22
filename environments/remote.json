@@ -119,6 +119,36 @@
       "name": "DB_ORA_DW_PASSWORD",
       "value": "<PASSWORD>",
       "description": "Password Oracle DW"
+    },
+    {
+      "name": "DB_MYSQL_URL",
+      "value": "jdbc:mysql://<HOST>:<PUERTO>/<DATABASE>",
+      "description": "JDBC URL MySQL HEC (gappsdb)"
+    },
+    {
+      "name": "DB_MYSQL_HOST",
+      "value": "<HOST>",
+      "description": "Host MySQL HEC"
+    },
+    {
+      "name": "DB_MYSQL_PORT",
+      "value": "<PUERTO>",
+      "description": "Puerto MySQL"
+    },
+    {
+      "name": "DB_MYSQL_DATABASE",
+      "value": "<DATABASE>",
+      "description": "Base MySQL HEC"
+    },
+    {
+      "name": "DB_MYSQL_USERNAME",
+      "value": "<USUARIO>",
+      "description": "Usuario MySQL HEC"
+    },
+    {
+      "name": "DB_MYSQL_PASSWORD",
+      "value": "<PASSWORD>",
+      "description": "Password MySQL HEC"
     }
   ]
 }

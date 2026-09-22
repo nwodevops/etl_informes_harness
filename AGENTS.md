@@ -33,10 +33,10 @@ ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md
 3. **Sin `${VAR}` literal** en logs Hop = variable mal definida.
 4. `logica/` no abre conexiones. I/O en `python/io/`. Homologación RData en `python/rdata/` + `stage_rdata.py`.
 
-## Flujo informes RData
+## Flujo informes (RData + FORM)
 
-`inputs.yaml` → `create_stg.py` → `stage_rdata.py` (`rdata.map`) → `main.py` / `logica/` → `APP.INF_CONSOL_RDATA`.  
-Mapa: [`docs/rdata_column_map.md`](docs/rdata_column_map.md).
+`inputs.yaml` → `create_stg.py` → `stage_rdata.py` / `stage_mysql.py` → `main.py` / `logica/` → `APP.DW_INF_CONSOL_RDATA` + `APP.DW_INF_CONSOL_FORM`.  
+Mapa: [`docs/rdata_column_map.md`](docs/rdata_column_map.md). SQL HEC: [`input/input_mysql/`](input/input_mysql/).
 
 ## Nuevo proyecto
 

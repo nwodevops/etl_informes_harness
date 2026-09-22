@@ -37,7 +37,7 @@ command -v java >/dev/null 2>&1 || fail "java no está en PATH"
 if [ ! -x .venv/bin/python ]; then
   fail "venv ausente o roto. Desde el repo padre: ./scripts/nuevo_etl.sh lo crea. A mano: python3 -m venv .venv && .venv/bin/python -m pip install -r python/requirements.txt"
 fi
-"$PY" -c "import yaml, pandas, jaydebeapi" 2>/dev/null \
+"$PY" -c "import yaml, pandas, jaydebeapi, pymysql" 2>/dev/null \
   || fail "el .venv no tiene dependencias (¿venv sin pip?). .venv/bin/python -m pip install -r python/requirements.txt"
 if [ ! -f project-config.json ]; then
   step "Generando project-config.json (switch-env local)"
@@ -54,7 +54,10 @@ step "Stage RData → STG_INF_CONSOL"
 command -v Rscript >/dev/null 2>&1 || fail "Rscript no está en PATH"
 "$PY" python/stage_rdata.py
 
-step "Python main (Oracle INF_CONSOL_RDATA)"
+step "Stage MySQL → STG_INF_CONSOL_FORM"
+"$PY" python/stage_mysql.py
+
+step "Python main (Oracle DW_INF_CONSOL_RDATA + DW_INF_CONSOL_FORM)"
 set +e
 "$PY" python/main.py 2>&1 | tee "$LOG"
 MAIN_RC=${PIPESTATUS[0]}
@@ -63,7 +66,9 @@ set -e
 
 step "Comprobando salidas"
 grep -q "Salida RESULTADO" "$LOG" || fail "no hay Salida RESULTADO en el log"
-grep -q "DW:.*INF_CONSOL_RDATA" "$LOG" || fail "no hay carga Oracle INF_CONSOL_RDATA en el log"
+grep -q "DW:.*DW_INF_CONSOL_RDATA" "$LOG" || fail "no hay carga Oracle DW_INF_CONSOL_RDATA en el log"
+grep -q "Salida RESULTADO_FORM" "$LOG" || fail "no hay Salida RESULTADO_FORM en el log"
+grep -q "DW:.*DW_INF_CONSOL_FORM" "$LOG" || fail "no hay carga Oracle DW_INF_CONSOL_FORM en el log"
 grep -q "Excel:" "$LOG" || warn "no se escribió Excel (opcional)"
 if grep -q '\${[A-Za-z0-9_]\+}' "$LOG"; then
   fail "log contiene variables Hop sin resolver"

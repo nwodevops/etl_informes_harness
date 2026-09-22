@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""ENTRY POINT capa lógica post-staging (informes RData).
+"""ENTRY POINT capa lógica post-staging (informes RData + FORM).
 
   1. SETUP   : project-config.json
   2. ENTRADA : io/leer_h2.py -> DataFrames (LECTURAS)
   3. LOGICA  : único .py en logica/
-  4. SALIDA  : Oracle APP.INF_CONSOL_RDATA (+ Excel opcional)
+  4. SALIDA  : Oracle APP.DW_INF_CONSOL_RDATA + APP.DW_INF_CONSOL_FORM
 
 Contrato: python/CONTRATO.md
 """
@@ -22,6 +22,9 @@ if str(HERE) not in sys.path:
 from config import load_vars, project_root  # noqa: E402
 
 SALIDA_DF = "RESULTADO"
+SALIDA_FORM = "RESULTADO_FORM"
+TABLE_RDATA = "DW_INF_CONSOL_RDATA"
+TABLE_FORM = "DW_INF_CONSOL_FORM"
 
 
 def _load(name: str, path: Path):
@@ -34,7 +37,7 @@ def _load(name: str, path: Path):
 
 
 def _es_salida(nombre: str) -> bool:
-    if nombre == SALIDA_DF:
+    if nombre in (SALIDA_DF, SALIDA_FORM):
         return True
     return nombre.startswith(("INT_", "QA_", "PROF_", "DF_"))
 
@@ -76,18 +79,23 @@ def main() -> int:
     for nombre, df in salidas.items():
         print(f"Salida {nombre}: {len(df)} filas x {len(df.columns)} columnas")
 
-    # Destino principal: Oracle DW
     escribir_ora = _load("escribir_oracle", HERE / "io" / "escribir_oracle.py")
-    escribir_ora.escribir_oracle(salidas[SALIDA_DF], root)
+    escribir_ora.escribir_oracle(salidas[SALIDA_DF], root, table=TABLE_RDATA)
 
-    # Excel smoke / inspección local (opcional)
+    if SALIDA_FORM in salidas and len(salidas[SALIDA_FORM]):
+        escribir_ora.escribir_oracle(salidas[SALIDA_FORM], root, table=TABLE_FORM)
+    elif SALIDA_FORM in salidas:
+        print(f"AVISO: {SALIDA_FORM} vacío; no se escribe {TABLE_FORM}", flush=True)
+    else:
+        print(f"AVISO: sin {SALIDA_FORM}; solo se escribió {TABLE_RDATA}", flush=True)
+
     try:
         escribir = _load("escribir_excel", HERE / "io" / "escribir_excel.py")
         escribir.escribir_excel(salidas[SALIDA_DF], root)
     except Exception as exc:
         print(f"AVISO: Excel no escrito ({exc})", flush=True)
 
-    print("Listo (H2 -> logica -> Oracle INF_CONSOL_RDATA).")
+    print("Listo (H2 -> logica -> Oracle DW_INF_CONSOL_RDATA / DW_INF_CONSOL_FORM).")
     return 0
 
 

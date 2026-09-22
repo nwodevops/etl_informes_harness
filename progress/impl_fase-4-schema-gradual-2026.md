@@ -2,7 +2,7 @@
 
 ## Qué
 
-Redefinir `APP.INF_CONSOL_RDATA` como estructura gradual anclada a BD/OD 2025–2026 (+30 cols, `MES_CORTE`).
+Redefinir `APP.DW_INF_CONSOL_RDATA` como estructura gradual anclada a BD/OD 2025–2026 (+30 cols, `MES_CORTE`).
 
 ## Cómo
 

@@ -1,7 +1,7 @@
-# Mapa de columnas RData → INF_CONSOL_RDATA
+# Mapa de columnas RData → DW_INF_CONSOL_RDATA
 
-Destino lógico: `DW.APP.INF_CONSOL_RDATA`  
-FQN Oracle: `APP.INF_CONSOL_RDATA` (conexión `oracle_dw` / user `app`).
+Destino lógico: `APP.DW_INF_CONSOL_RDATA` (DW / `oracle_dw`).  
+FQN Oracle: `APP.DW_INF_CONSOL_RDATA` (conexión `oracle_dw` / user `app`).
 
 ## Estructura gradual (prioridad 2025/2026)
 

@@ -1,6 +1,7 @@
-"""SALIDA: RESULTADO → APP.INF_CONSOL_RDATA (DW / oracle_dw).
+"""SALIDA: DataFrame → APP.<tabla> (DW / oracle_dw).
 
 Full refresh: DROP + CREATE + INSERT. Verifica COUNT(*) post-carga.
+Tablas típicas: DW_INF_CONSOL_RDATA, DW_INF_CONSOL_FORM.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from rdata.schema import (
     oracle_ddl,
 )
 
-TABLE = "INF_CONSOL_RDATA"
+TABLE_DEFAULT = "DW_INF_CONSOL_RDATA"
 ESQUEMA_DEFAULT = "APP"
 
 
@@ -107,11 +108,18 @@ def _coerce(v, col: str):
     return _trunc_varchar(s, 2000)
 
 
-def escribir_oracle(df: pd.DataFrame, root: Path | None = None) -> int:
-    """Wipe+DDL+INSERT APP.INF_CONSOL_RDATA. Devuelve filas en BD."""
+def escribir_oracle(
+    df: pd.DataFrame,
+    root: Path | None = None,
+    table: str = TABLE_DEFAULT,
+) -> int:
+    """Wipe+DDL+INSERT APP.<table>. Devuelve filas en BD."""
     root = root or project_root()
     if df is None:
         raise ValueError("escribir_oracle: df es None")
+    table = str(table).strip().upper()
+    if not table:
+        raise ValueError("escribir_oracle: table vacío")
 
     conn, cv = _connect(root)
     try:
@@ -121,21 +129,21 @@ def escribir_oracle(df: pd.DataFrame, root: Path | None = None) -> int:
             print(f"DW: esquema sesión = {schema} (esperado {ESQUEMA_DEFAULT})", flush=True)
 
         ts = _user_tablespace(cur)
-        if _table_exists(cur, schema, TABLE):
-            cur.execute(f"DROP TABLE {schema}.{TABLE} PURGE")
-            print(f"DW: DROP TABLE {schema}.{TABLE}", flush=True)
+        if _table_exists(cur, schema, table):
+            cur.execute(f"DROP TABLE {schema}.{table} PURGE")
+            print(f"DW: DROP TABLE {schema}.{table}", flush=True)
 
-        ddl = oracle_ddl(schema, TABLE)
+        ddl = oracle_ddl(schema, table)
         # inject tablespace before end
         ddl_ts = ddl.rstrip() + f" TABLESPACE {ts}"
-        print(f"DW: CREATE {schema}.{TABLE} (TABLESPACE {ts})...", flush=True)
+        print(f"DW: CREATE {schema}.{table} (TABLESPACE {ts})...", flush=True)
         cur.execute(ddl_ts)
 
-        comment_stmts = oracle_comment_statements(schema, TABLE)
+        comment_stmts = oracle_comment_statements(schema, table)
         for stmt in comment_stmts:
             cur.execute(stmt)
         print(
-            f"DW: COMMENT ON {schema}.{TABLE} "
+            f"DW: COMMENT ON {schema}.{table} "
             f"({len(comment_stmts) - 1} columnas)",
             flush=True,
         )
@@ -143,7 +151,7 @@ def escribir_oracle(df: pd.DataFrame, root: Path | None = None) -> int:
         cols = list(df.columns)
         placeholders = ", ".join([f":{i + 1}" for i in range(len(cols))])
         col_sql = ", ".join(cols)
-        sql = f"INSERT INTO {schema}.{TABLE} ({col_sql}) VALUES ({placeholders})"
+        sql = f"INSERT INTO {schema}.{table} ({col_sql}) VALUES ({placeholders})"
 
         rows = []
         for tup in df.itertuples(index=False, name=None):
@@ -153,10 +161,10 @@ def escribir_oracle(df: pd.DataFrame, root: Path | None = None) -> int:
             cur.executemany(sql, rows, batcherrors=False)
         conn.commit()
 
-        cur.execute(f"SELECT COUNT(*) FROM {schema}.{TABLE}")
+        cur.execute(f"SELECT COUNT(*) FROM {schema}.{table}")
         n_bd = int(cur.fetchone()[0])
         print(
-            f"DW: {schema}.{TABLE} = {n_bd} filas "
+            f"DW: {schema}.{table} = {n_bd} filas "
             f"(df={len(df)}) @ {cv['host']}:{cv['port']}/{cv['database']}",
             flush=True,
         )
@@ -167,7 +175,7 @@ def escribir_oracle(df: pd.DataFrame, root: Path | None = None) -> int:
 
         # Desglose
         cur.execute(
-            f"SELECT FUENTE, ANIO, COUNT(*) FROM {schema}.{TABLE} "
+            f"SELECT FUENTE, ANIO, COUNT(*) FROM {schema}.{table} "
             f"GROUP BY FUENTE, ANIO ORDER BY FUENTE, ANIO"
         )
         for fuente, anio, n in cur.fetchall():

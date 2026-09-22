@@ -222,7 +222,7 @@ def _sql_quote(text: str) -> str:
 
 
 def oracle_comment_statements(schema: str, table: str) -> list[str]:
-    """COMMENT ON TABLE/COLUMN para APP.INF_CONSOL_RDATA."""
+    """COMMENT ON TABLE/COLUMN para APP.DW_INF_CONSOL_RDATA."""
     stmts = [f"COMMENT ON TABLE {schema}.{table} IS {_sql_quote(TABLE_COMMENT)}"]
     missing = [n for n in CANONICAL_NAMES if n not in COLUMN_COMMENTS]
     if missing:
@@ -236,7 +236,7 @@ def oracle_comment_statements(schema: str, table: str) -> list[str]:
 
 
 def oracle_ddl(schema: str, table: str) -> str:
-    """CREATE TABLE APP.INF_CONSOL_RDATA …"""
+    """CREATE TABLE APP.DW_INF_CONSOL_RDATA …"""
     wide_1000 = {
         "ARCHIVO",
         "OBJETO_R",

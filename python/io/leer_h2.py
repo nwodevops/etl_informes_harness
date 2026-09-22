@@ -13,6 +13,7 @@ from h2_conn import connect_h2
 
 LECTURAS: dict[str, str] = {
     "INF_RDATA": "SELECT * FROM PUBLIC.STG_INF_CONSOL",
+    "INF_FORM": "SELECT * FROM PUBLIC.STG_INF_CONSOL_FORM",
 }
 
 

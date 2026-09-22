@@ -117,8 +117,38 @@
     },
     {
       "name": "DB_ORA_DW_PASSWORD",
-      "value": "<PASSWORD>",
+      "value": "app2026",
       "description": "Password Oracle DW"
+    },
+    {
+      "name": "DB_MYSQL_URL",
+      "value": "jdbc:mysql://209.45.104.78:3306/gappsdb",
+      "description": "JDBC URL MySQL HEC (gappsdb)"
+    },
+    {
+      "name": "DB_MYSQL_HOST",
+      "value": "209.45.104.78",
+      "description": "Host MySQL HEC"
+    },
+    {
+      "name": "DB_MYSQL_PORT",
+      "value": "3306",
+      "description": "Puerto MySQL"
+    },
+    {
+      "name": "DB_MYSQL_DATABASE",
+      "value": "gappsdb",
+      "description": "Base MySQL HEC"
+    },
+    {
+      "name": "DB_MYSQL_USERNAME",
+      "value": "gapps",
+      "description": "Usuario MySQL HEC"
+    },
+    {
+      "name": "DB_MYSQL_PASSWORD",
+      "value": "Knjux4a9tJCbrly!",
+      "description": "Password MySQL HEC (local demo)"
     }
   ]
 }

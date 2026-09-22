@@ -136,7 +136,7 @@ PY=python3
 "$PY" python/main.py
 </script>
       <name>Run Python</name>
-      <description>logica/informes_rdata.py → APP.INF_CONSOL_RDATA</description>
+      <description>logica/informes_rdata.py → APP.DW_INF_CONSOL_RDATA</description>
       <type>SHELL</type>
       <attributes/>
       <xloc>688</xloc>
@@ -194,7 +194,7 @@ PY=python3
   </hops>
   <notepads>
     <notepad>
-      <note>RData: Reset → create STG → stage_rdata → Run Python → Oracle INF_CONSOL_RDATA.</note>
+      <note>RData: Reset → create STG → stage_rdata → Run Python → Oracle DW_INF_CONSOL_RDATA.</note>
       <markdown>N</markdown>
       <notetype>GENERAL</notetype>
       <fontname>Segoe UI</fontname>

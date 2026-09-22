@@ -10,7 +10,7 @@ Al cerrar una feature, append aquí: fecha, id, resumen, evidencia (`progress/im
 
 ## 2026-09-18 — fase-2-rdata-stg + fase-3-oracle-consol
 
-- 14 RData (BD+OD 2019–2025) → mapa canónico → `STG_INF_CONSOL` → `APP.INF_CONSOL_RDATA`
+- 14 RData (BD+OD 2019–2025) → mapa canónico → `STG_INF_CONSOL` → `APP.DW_INF_CONSOL_RDATA`
 - Evidencia: `progress/impl_fase-3-oracle-consol.md`
 - Conteo: **101749** filas Oracle = suma RData; desglose FUENTE/ANIO OK
 
@@ -31,3 +31,11 @@ Al cerrar una feature, append aquí: fecha, id, resumen, evidencia (`progress/im
 - Fuera: `N°` / `USUARIO` / `FECHA_REGISTRO` / `INF_EVAL*`
 - Evidencia: `progress/impl_fase-5-union-vigente-2026.md`
 - Oracle: **111091** filas × **83** cols; `./init.sh` → HARNESS OK
+
+---
+
+## 2026-09-21 — fase-6-mysql-form
+
+- MySQL HEC SQL → `STG_INF_CONSOL_FORM` → `APP.DW_INF_CONSOL_FORM` (paralelo a RData)
+- Evidencia: `progress/impl_fase-6-mysql-form.md`
+- Oracle FORM: **17** filas (BD 15 + OD 2); RData sigue **111091**; `./init.sh` → HARNESS OK
