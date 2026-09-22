@@ -52,8 +52,8 @@
       "id": "fase-7-hop-csep-informes",
       "title": "Hop CSEP_INFORMES_VIEW → DW_INF_CSEP_INFORMES_VIEW",
       "status": "done",
-      "criterio": "wf_main: DDL + pl_csep_informes; tabla DW_INF_CSEP_INFORMES_VIEW en oracle_dw",
-      "doc": "workflows/wf_csep_informes.hwf"
+      "criterio": "wf_main: ddl_csep_informes.py --load --soft; tabla DW_INF_CSEP_INFORMES_VIEW en oracle_dw (stub si SISUD cae)",
+      "doc": "python/ddl_csep_informes.py"
     }
   ]
 }

@@ -130,71 +130,56 @@ def load_mysql_canonical(sql_path: Path, variables: dict[str, str]) -> pd.DataFr
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="MySQL → STG_INF_CONSOL_FORM")
     parser.add_argument("--root", default=None)
+    parser.add_argument(
+        "--soft",
+        action="store_true",
+        help="Si MySQL falla, exit 0 y deja STG vacío",
+    )
     args = parser.parse_args(argv)
 
-    root = Path(args.root).resolve() if args.root else project_root()
-    variables = load_vars(root)
-    sources = load_sources(root, variables)
-    mysql_srcs = [s for s in sources if s.get("type") == "mysql"]
-    if not mysql_srcs:
-        raise SystemExit("inputs.yaml sin sources type=mysql")
-
-    src = mysql_srcs[0]
-    stg = str(src.get("stg_table") or STG_DEFAULT).strip().upper()
-    raw_sql = (src.get("sql_path") or "").strip()
-    if not raw_sql:
-        raise SystemExit("mysql source sin sql_path")
-    sql_path = Path(raw_sql)
-    if not sql_path.is_absolute():
-        sql_path = (root / sql_path).resolve()
-
-    df = load_mysql_canonical(sql_path, variables)
-    print(f"Total MySQL: {len(df)} filas x {len(df.columns)} cols", flush=True)
-
-    conn = connect_h2(root, variables)
     try:
-        n = _insert_h2(conn, stg, df)
-        print(f"H2 {stg}: {n} filas insertadas", flush=True)
-    finally:
-        conn.close()
+        root = Path(args.root).resolve() if args.root else project_root()
+        variables = load_vars(root)
+        sources = load_sources(root, variables)
+        mysql_srcs = [s for s in sources if s.get("type") == "mysql"]
+        if not mysql_srcs:
+            raise ValueError("inputs.yaml sin sources type=mysql")
 
-    if "FUENTE" in df.columns and "ANIO" in df.columns:
-        g = df.groupby(["FUENTE", "ANIO"], dropna=False).size().reset_index(name="N")
-        for row in g.itertuples(index=False):
-            print(f"  {row.FUENTE} {row.ANIO}: {row.N}", flush=True)
+        src = mysql_srcs[0]
+        stg = str(src.get("stg_table") or STG_DEFAULT).strip().upper()
+        raw_sql = (src.get("sql_path") or "").strip()
+        if not raw_sql:
+            raise ValueError("mysql source sin sql_path")
+        sql_path = Path(raw_sql)
+        if not sql_path.is_absolute():
+            sql_path = (root / sql_path).resolve()
 
-    return 0
+        df = load_mysql_canonical(sql_path, variables)
+        print(f"Total MySQL: {len(df)} filas x {len(df.columns)} cols", flush=True)
 
+        conn = connect_h2(root, variables)
+        try:
+            n = _insert_h2(conn, stg, df)
+            print(f"H2 {stg}: {n} filas insertadas", flush=True)
+        finally:
+            conn.close()
 
-if __name__ == "__main__":
-    import argparse as _ap
+        if "FUENTE" in df.columns and "ANIO" in df.columns:
+            g = df.groupby(["FUENTE", "ANIO"], dropna=False).size().reset_index(name="N")
+            for row in g.itertuples(index=False):
+                print(f"  {row.FUENTE} {row.ANIO}: {row.N}", flush=True)
 
-    _p = _ap.ArgumentParser(add_help=False)
-    _p.add_argument("--soft", action="store_true")
-    _known, _rest = _p.parse_known_args()
-    try:
-        rc = main(_rest if _rest else None)
-        raise SystemExit(rc)
-    except SystemExit as exc:
-        code = exc.code
-        if code is None:
-            code = 0
-        elif not isinstance(code, int):
-            code = 1
-        if code != 0 and _known.soft:
-            print(
-                f"AVISO: stage_mysql falló (soft); "
-                f"STG_INF_CONSOL_FORM queda vacío ({exc})",
-                flush=True,
-            )
-            raise SystemExit(0)
-        raise
+        return 0
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
-        if _known.soft:
+        if args.soft:
             print(
                 "AVISO: stage_mysql falló (soft); STG_INF_CONSOL_FORM queda vacío",
                 flush=True,
             )
-            raise SystemExit(0)
-        raise SystemExit(1)
+            return 0
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

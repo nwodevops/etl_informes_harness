@@ -67,7 +67,7 @@ Requiere Java, jar H2, `.venv` (`pyyaml pandas jaydebeapi pymysql`), **Rscript**
 2. `DW_INF_CONSOL_FORM` (MySQL HEC; **siempre** se crea, aunque MySQL caiga o vaya vacío)
 3. `DW_INF_CSEP_INFORMES_VIEW` (vista SISUD `CSEP_INFORMES_VIEW` vía DDL + `pl_csep_informes`; stub vacío si SISUD cae)
 
-`inputs.yaml` → `create_stg.py` → `stage_rdata.py` / `stage_mysql.py --soft` → `main.py` → `ddl_csep_informes.py` + pipeline Hop.  
+`inputs.yaml` → `create_stg.py` → `stage_rdata.py` / `stage_mysql.py --soft` → `main.py` → `ddl_csep_informes.py --load --soft`.  
 Mapa RData: [`docs/rdata_column_map.md`](docs/rdata_column_map.md). SQL HEC: [`input/input_mysql/`](input/input_mysql/).
 
 | OS | Harness | Workflow Hop |
@@ -75,7 +75,7 @@ Mapa RData: [`docs/rdata_column_map.md`](docs/rdata_column_map.md). SQL HEC: [`i
 | Linux | [`init.sh`](init.sh) | [`workflows/wf_main.hwf`](workflows/wf_main.hwf) |
 | Windows | [`init.bat`](init.bat) | [`workflows/wf_main_windows.hwf`](workflows/wf_main_windows.hwf) |
 
-CSEP solo: [`wf_csep_informes.hwf`](workflows/wf_csep_informes.hwf) / [`wf_csep_informes_windows.hwf`](workflows/wf_csep_informes_windows.hwf).
+CSEP opcional vía Hop: [`pl_csep_informes.hpl`](pipelines/pl_csep_informes.hpl) / [`wf_csep_informes*.hwf`](workflows/wf_csep_informes.hwf). En `wf_main` la carga CSEP es Python (`--load --soft`) para no tumbar el wf si SISUD está caído.
 
 ## Nuevo proyecto
 

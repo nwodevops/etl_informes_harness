@@ -32,8 +32,8 @@
     },
     {
       "name": "DB_ORA_SISUD_URL",
-      "value": "jdbc:oracle:thin:@//localhost:1523/XEPDB1",
-      "description": "Oracle fuente SISUD (CSEP_INFORMES_VIEW)"
+      "value": "jdbc:oracle:thin:@//localhost:1525/CSEP",
+      "description": "Oracle fuente SISUD (CSEP_INFORMES_VIEW) — docker csep_oracle_xe"
     },
     {
       "name": "DB_ORA_SISUD_HOST",
@@ -42,12 +42,12 @@
     },
     {
       "name": "DB_ORA_SISUD_PORT",
-      "value": "1523",
-      "description": "Puerto Oracle fuente"
+      "value": "1525",
+      "description": "Puerto Oracle fuente (host→1521 container)"
     },
     {
       "name": "DB_ORA_SISUD_DATABASE",
-      "value": "XEPDB1",
+      "value": "CSEP",
       "description": "Service Oracle fuente"
     },
     {
