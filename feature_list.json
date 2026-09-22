@@ -50,9 +50,9 @@
     },
     {
       "id": "fase-7-hop-csep-informes",
-      "title": "Hop CSEP_INFORMES_VIEW → CSEP_INFORMES",
+      "title": "Hop CSEP_INFORMES_VIEW → DW_INF_CSEP_INFORMES_VIEW",
       "status": "done",
-      "criterio": "wf_csep_informes: DDL + pl_csep_informes; tabla en oracle_dw; independiente de init.sh",
+      "criterio": "wf_main: DDL + pl_csep_informes; tabla DW_INF_CSEP_INFORMES_VIEW en oracle_dw",
       "doc": "workflows/wf_csep_informes.hwf"
     }
   ]

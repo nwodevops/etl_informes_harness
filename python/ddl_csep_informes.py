@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""DDL destino: DROP+CREATE CSEP_INFORMES desde columnas de CSEP_INFORMES_VIEW.
+"""CSEP_INFORMES_VIEW (oracle_sisud) → tabla DW_INF_CSEP_INFORMES_VIEW (oracle_dw).
 
-Hop TableOutput no crea tablas; este script aplica el DDL en oracle_dw.
-Las filas las copia pipelines/pl_csep_informes.hpl.
+1) DROP+CREATE en destino (columnas de la vista; stub si la fuente cae).
+2) Opcional --load: INSERT de filas (si la fuente responde).
+
+Usado por wf_main / init.sh. El pipeline Hop pl_csep_informes.hpl es
+equivalente para la carga cuando SISUD está arriba.
 """
 
 from __future__ import annotations
@@ -18,9 +21,10 @@ if str(HERE) not in sys.path:
 from config import load_vars, project_root, require_live_conn  # noqa: E402
 
 SRC_VIEW = "CSEP_INFORMES_VIEW"
-DST_TABLE = "CSEP_INFORMES"
+DST_TABLE = "DW_INF_CSEP_INFORMES_VIEW"
 SRC_CONN = "oracle_sisud"
 DST_CONN = "oracle_dw"
+STUB_COL = "_ETL_SIN_FUENTE"
 
 
 def _connect(connection: str, variables: dict[str, str]):
@@ -72,12 +76,11 @@ def _ora_col_type(
     if dt == "DATE":
         return "DATE"
     if dt.startswith("TIMESTAMP"):
-        return data_type  # p.ej. TIMESTAMP(6)
+        return data_type
     if dt in ("CLOB", "NCLOB", "BLOB", "XMLTYPE", "LONG", "RAW"):
         if dt == "RAW" and data_length:
             return f"RAW({int(data_length)})"
         return dt
-    # fallback seguro
     if data_length:
         return f"VARCHAR2({min(int(data_length), 4000)})"
     return "VARCHAR2(4000)"
@@ -108,8 +111,7 @@ def _fetch_view_columns(cur, view_name: str) -> list[tuple]:
             f"(¿grant / synonym para el usuario fuente?)"
         )
     owner0 = rows[0][0]
-    cols = [r for r in rows if r[0] == owner0]
-    return cols
+    return [r for r in rows if r[0] == owner0]
 
 
 def build_create_sql(cols: list[tuple], table: str) -> str:
@@ -134,27 +136,81 @@ def build_create_sql(cols: list[tuple], table: str) -> str:
     return f"CREATE TABLE {table} (\n{body}\n)"
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description=f"DDL {DST_TABLE} desde {SRC_VIEW}"
+def _drop_table(cur, table: str) -> None:
+    cur.execute(
+        f"""
+        BEGIN
+          EXECUTE IMMEDIATE 'DROP TABLE {table} PURGE';
+        EXCEPTION
+          WHEN OTHERS THEN
+            IF SQLCODE != -942 THEN RAISE; END IF;
+        END;
+        """
     )
-    parser.add_argument("--root", default=None)
-    args = parser.parse_args(argv)
 
-    root = Path(args.root).resolve() if args.root else project_root()
-    variables = load_vars(root)
 
-    src, src_cv = _connect(SRC_CONN, variables)
+def _ensure_ddl(variables: dict[str, str]) -> tuple[list[str] | None, bool]:
+    """DROP+CREATE destino. Devuelve (nombres_cols | None si stub, desde_fuente)."""
+    cols = None
+    from_source = False
     try:
-        cur = src.cursor()
-        cols = _fetch_view_columns(cur, SRC_VIEW)
-        owner = cols[0][0]
+        src, src_cv = _connect(SRC_CONN, variables)
+        try:
+            cur = src.cursor()
+            cols = _fetch_view_columns(cur, SRC_VIEW)
+            owner = cols[0][0]
+            print(
+                f"Fuente: {owner}.{SRC_VIEW} ({len(cols)} cols) "
+                f"@ {src_cv['host']}:{src_cv['port']}/{src_cv['database']}",
+                flush=True,
+            )
+            cur.close()
+            from_source = True
+        finally:
+            src.close()
+    except Exception as exc:
         print(
-            f"Fuente: {owner}.{SRC_VIEW} ({len(cols)} cols) "
-            f"@ {src_cv['host']}:{src_cv['port']}/{src_cv['database']}",
+            f"AVISO: no se pudo leer {SRC_VIEW} en fuente ({exc}); "
+            f"se crea {DST_TABLE} stub vacía",
             flush=True,
         )
-        ddl = build_create_sql(cols, DST_TABLE)
+
+    dst, dst_cv = _connect(DST_CONN, variables)
+    try:
+        cur = dst.cursor()
+        _drop_table(cur, DST_TABLE)
+        print(f"Destino: DROP {DST_TABLE} (si existía)", flush=True)
+        if cols:
+            ddl = build_create_sql(cols, DST_TABLE)
+            col_names = [c[1] for c in cols]
+        else:
+            ddl = (
+                f"CREATE TABLE {DST_TABLE} (\n"
+                f'  "{STUB_COL}" VARCHAR2(4000)\n)'
+            )
+            col_names = None
+        cur.execute(ddl)
+        dst.commit()
+        print(
+            f"Destino: CREATE {DST_TABLE} "
+            f"@ {dst_cv['host']}:{dst_cv['port']}/{dst_cv['database']} "
+            f"user={dst_cv['username']}"
+            + (" (stub)" if not from_source else ""),
+            flush=True,
+        )
+        cur.close()
+        return col_names, from_source
+    finally:
+        dst.close()
+
+
+def _load_rows(variables: dict[str, str], col_names: list[str]) -> int:
+    src, _src_cv = _connect(SRC_CONN, variables)
+    try:
+        cur = src.cursor()
+        col_sql = ", ".join(f'"{c}"' for c in col_names)
+        cur.execute(f"SELECT {col_sql} FROM {SRC_VIEW}")
+        rows = cur.fetchall()
         cur.close()
     finally:
         src.close()
@@ -162,39 +218,69 @@ def main(argv: list[str] | None = None) -> int:
     dst, dst_cv = _connect(DST_CONN, variables)
     try:
         cur = dst.cursor()
-        cur.execute(
-            f"""
-            BEGIN
-              EXECUTE IMMEDIATE 'DROP TABLE {DST_TABLE} PURGE';
-            EXCEPTION
-              WHEN OTHERS THEN
-                IF SQLCODE != -942 THEN RAISE; END IF;
-            END;
-            """
-        )
-        print(f"Destino: DROP {DST_TABLE} (si existía)", flush=True)
-        cur.execute(ddl)
+        placeholders = ", ".join([f":{i + 1}" for i in range(len(col_names))])
+        col_sql = ", ".join(f'"{c}"' for c in col_names)
+        sql = f"INSERT INTO {DST_TABLE} ({col_sql}) VALUES ({placeholders})"
+        if rows:
+            # oracledb: convertir a list de tuples limpios
+            batch = [tuple(r) for r in rows]
+            cur.executemany(sql, batch)
         dst.commit()
+        cur.execute(f"SELECT COUNT(*) FROM {DST_TABLE}")
+        n = int(cur.fetchone()[0])
         print(
-            f"Destino: CREATE {DST_TABLE} "
-            f"@ {dst_cv['host']}:{dst_cv['port']}/{dst_cv['database']} "
-            f"user={dst_cv['username']}",
+            f"Destino: {DST_TABLE} = {n} filas "
+            f"@ {dst_cv['host']}:{dst_cv['port']}/{dst_cv['database']}",
             flush=True,
         )
         cur.close()
+        return n
     finally:
         dst.close()
 
-    return 0
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description=f"DDL/load {DST_TABLE} desde {SRC_VIEW}"
+    )
+    parser.add_argument("--root", default=None)
+    parser.add_argument(
+        "--load",
+        action="store_true",
+        help="Además del DDL, copia filas desde la vista",
+    )
+    parser.add_argument(
+        "--soft",
+        action="store_true",
+        help="Si oracle_dw falla, exit 0 (aviso); stub si cae la fuente",
+    )
+    args = parser.parse_args(argv)
+
+    root = Path(args.root).resolve() if args.root else project_root()
+    variables = load_vars(root)
+
+    try:
+        col_names, from_source = _ensure_ddl(variables)
+        if args.load and from_source and col_names:
+            try:
+                _load_rows(variables, col_names)
+            except Exception as exc:
+                print(f"AVISO: carga CSEP falló ({exc}); tabla queda vacía", flush=True)
+                if not args.soft:
+                    return 1
+        elif args.load and not from_source:
+            print("AVISO: --load omitido (sin metadatos de fuente)", flush=True)
+        return 0
+    except Exception as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        if args.soft:
+            print(
+                f"AVISO: CSEP soft — no se pudo asegurar {DST_TABLE} en destino",
+                flush=True,
+            )
+            return 0
+        return 1
 
 
 if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    except (FileNotFoundError, ValueError, KeyError, RuntimeError) as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        raise SystemExit(1)
-    except Exception as exc:
-        # oracledb.OperationalError y similares
-        print(f"ERROR: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+    raise SystemExit(main())

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Harness — smoke demo del arquetipo (H2 + Python, sin staging externo).
+# Harness — smoke: RData + MySQL(soft) + main (2 tablas) + CSEP (3ª tabla).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -54,26 +54,33 @@ step "Stage RData → STG_INF_CONSOL"
 command -v Rscript >/dev/null 2>&1 || fail "Rscript no está en PATH"
 "$PY" python/stage_rdata.py
 
-step "Stage MySQL → STG_INF_CONSOL_FORM"
-"$PY" python/stage_mysql.py
+step "Stage MySQL → STG_INF_CONSOL_FORM (soft)"
+"$PY" python/stage_mysql.py --soft
 
-step "Python main (Oracle DW_INF_CONSOL_RDATA + DW_INF_CONSOL_FORM)"
+step "Python main (DW_INF_CONSOL_RDATA + DW_INF_CONSOL_FORM siempre)"
 set +e
 "$PY" python/main.py 2>&1 | tee "$LOG"
 MAIN_RC=${PIPESTATUS[0]}
 set -e
 [ "$MAIN_RC" -eq 0 ] || fail "python/main.py terminó con código $MAIN_RC"
 
-step "Comprobando salidas"
+step "CSEP_INFORMES_VIEW → DW_INF_CSEP_INFORMES_VIEW (soft + load)"
+set +e
+"$PY" python/ddl_csep_informes.py --load --soft 2>&1 | tee -a "$LOG"
+CSEP_RC=${PIPESTATUS[0]}
+set -e
+[ "$CSEP_RC" -eq 0 ] || fail "ddl_csep_informes.py terminó con código $CSEP_RC"
+
+step "Comprobando salidas (3 tablas destino)"
 grep -q "Salida RESULTADO" "$LOG" || fail "no hay Salida RESULTADO en el log"
 grep -q "DW:.*DW_INF_CONSOL_RDATA" "$LOG" || fail "no hay carga Oracle DW_INF_CONSOL_RDATA en el log"
-grep -q "Salida RESULTADO_FORM" "$LOG" || fail "no hay Salida RESULTADO_FORM en el log"
 grep -q "DW:.*DW_INF_CONSOL_FORM" "$LOG" || fail "no hay carga Oracle DW_INF_CONSOL_FORM en el log"
+grep -q "Destino: CREATE DW_INF_CSEP_INFORMES_VIEW" "$LOG" || fail "no hay CREATE DW_INF_CSEP_INFORMES_VIEW en el log"
 grep -q "Excel:" "$LOG" || warn "no se escribió Excel (opcional)"
 if grep -q '\${[A-Za-z0-9_]\+}' "$LOG"; then
   fail "log contiene variables Hop sin resolver"
 fi
 
 echo ""
-echo -e "${GREEN}HARNESS OK${NC} — ver CHECKPOINTS.md"
+echo -e "${GREEN}HARNESS OK${NC} — 3 tablas: DW_INF_CONSOL_RDATA, DW_INF_CONSOL_FORM, DW_INF_CSEP_INFORMES_VIEW"
 exit 0

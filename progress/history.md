@@ -44,6 +44,6 @@ Al cerrar una feature, append aquí: fecha, id, resumen, evidencia (`progress/im
 
 ## 2026-09-22 — fase-7-hop-csep-informes
 
-- Hop: `CSEP_INFORMES_VIEW` → `CSEP_INFORMES` (`wf_csep_informes` + `ddl_csep_informes.py`)
+- Hop: vista `CSEP_INFORMES_VIEW` → tabla `DW_INF_CSEP_INFORMES_VIEW` (`wf_main` + `ddl_csep_informes.py`)
 - Evidencia: `progress/impl_fase-7-hop-csep-informes.md`
 - Independiente de `init.sh` / `wf_main`

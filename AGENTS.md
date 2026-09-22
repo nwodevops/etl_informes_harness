@@ -33,20 +33,16 @@ ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md
 3. **Sin `${VAR}` literal** en logs Hop = variable mal definida.
 4. `logica/` no abre conexiones. I/O en `python/io/`. Homologación RData en `python/rdata/` + `stage_rdata.py`.
 
-## Flujo informes (RData + FORM)
+## Flujo informes (RData + FORM + CSEP)
 
-`inputs.yaml` → `create_stg.py` → `stage_rdata.py` / `stage_mysql.py` → `main.py` / `logica/` → `APP.DW_INF_CONSOL_RDATA` + `APP.DW_INF_CONSOL_FORM`.  
-Mapa: [`docs/rdata_column_map.md`](docs/rdata_column_map.md). SQL HEC: [`input/input_mysql/`](input/input_mysql/).
+`wf_main` / `./init.sh` dejan **3 tablas** en oracle_dw:
 
-## Flujo CSEP informes (Hop, paralelo)
+1. `DW_INF_CONSOL_RDATA` (RData)
+2. `DW_INF_CONSOL_FORM` (MySQL HEC; **siempre** se crea, aunque MySQL caiga o vaya vacío)
+3. `DW_INF_CSEP_INFORMES_VIEW` (vista SISUD `CSEP_INFORMES_VIEW` vía DDL + `pl_csep_informes`; stub vacío si SISUD cae)
 
-`CSEP_INFORMES_VIEW` (oracle_sisud) → [`python/ddl_csep_informes.py`](python/ddl_csep_informes.py) + [`pipelines/pl_csep_informes.hpl`](pipelines/pl_csep_informes.hpl) → `CSEP_INFORMES` (oracle_dw).  
-Workflow: [`workflows/wf_csep_informes.hwf`](workflows/wf_csep_informes.hwf). **No** entra en `./init.sh` / `wf_main`.
-
-```bash
-./switch-env.sh local   # o remote (completar DB_ORA_SISUD_* + DB_ORA_DW_* desde docs/credenciales/)
-# Hop GUI → wf_csep_informes   |   hop-run -f workflows/wf_csep_informes.hwf ...
-```
+`inputs.yaml` → `create_stg.py` → `stage_rdata.py` / `stage_mysql.py --soft` → `main.py` → `ddl_csep_informes.py` + pipeline Hop.  
+Mapa RData: [`docs/rdata_column_map.md`](docs/rdata_column_map.md). SQL HEC: [`input/input_mysql/`](input/input_mysql/).
 
 ## Nuevo proyecto
 

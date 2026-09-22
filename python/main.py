@@ -4,7 +4,8 @@
   1. SETUP   : project-config.json
   2. ENTRADA : io/leer_h2.py -> DataFrames (LECTURAS)
   3. LOGICA  : único .py en logica/
-  4. SALIDA  : Oracle APP.DW_INF_CONSOL_RDATA + APP.DW_INF_CONSOL_FORM
+  4. SALIDA  : siempre APP.DW_INF_CONSOL_RDATA + APP.DW_INF_CONSOL_FORM
+               (FORM se crea aunque esté vacío / MySQL caído)
 
 Contrato: python/CONTRATO.md
 """
@@ -20,6 +21,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 from config import load_vars, project_root  # noqa: E402
+from rdata.schema import CANONICAL_NAMES  # noqa: E402
 
 SALIDA_DF = "RESULTADO"
 SALIDA_FORM = "RESULTADO_FORM"
@@ -82,12 +84,21 @@ def main() -> int:
     escribir_ora = _load("escribir_oracle", HERE / "io" / "escribir_oracle.py")
     escribir_ora.escribir_oracle(salidas[SALIDA_DF], root, table=TABLE_RDATA)
 
-    if SALIDA_FORM in salidas and len(salidas[SALIDA_FORM]):
-        escribir_ora.escribir_oracle(salidas[SALIDA_FORM], root, table=TABLE_FORM)
-    elif SALIDA_FORM in salidas:
-        print(f"AVISO: {SALIDA_FORM} vacío; no se escribe {TABLE_FORM}", flush=True)
-    else:
-        print(f"AVISO: sin {SALIDA_FORM}; solo se escribió {TABLE_RDATA}", flush=True)
+    # FORM: siempre DROP+CREATE en destino (aunque 0 filas o sin INF_FORM)
+    form_df = salidas.get(SALIDA_FORM)
+    if form_df is None or list(form_df.columns) == []:
+        form_df = pd.DataFrame(columns=CANONICAL_NAMES)
+        print(
+            f"AVISO: {SALIDA_FORM} ausente/sin columnas; "
+            f"se crea {TABLE_FORM} vacía (canónico)",
+            flush=True,
+        )
+    elif len(form_df) == 0:
+        print(
+            f"AVISO: {SALIDA_FORM} vacío; se crea {TABLE_FORM} con 0 filas",
+            flush=True,
+        )
+    escribir_ora.escribir_oracle(form_df, root, table=TABLE_FORM)
 
     try:
         escribir = _load("escribir_excel", HERE / "io" / "escribir_excel.py")
@@ -95,7 +106,11 @@ def main() -> int:
     except Exception as exc:
         print(f"AVISO: Excel no escrito ({exc})", flush=True)
 
-    print("Listo (H2 -> logica -> Oracle DW_INF_CONSOL_RDATA / DW_INF_CONSOL_FORM).")
+    print(
+        "Listo (H2 -> logica -> Oracle "
+        f"{TABLE_RDATA} + {TABLE_FORM}).",
+        flush=True,
+    )
     return 0
 
 
