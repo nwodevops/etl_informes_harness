@@ -1,7 +1,7 @@
 """SALIDA: DataFrame → APP.<tabla> (DW / oracle_dw).
 
-Full refresh: DROP + CREATE + INSERT. Verifica COUNT(*) post-carga.
-Tablas típicas: DW_INF_CONSOL_RDATA, DW_INF_CONSOL_FORM.
+Full refresh: TRUNCATE + INSERT. La tabla debe existir (sql/dw/ una vez).
+Tabla típica: DW_INF_CONSOL_RDATA.
 """
 
 from __future__ import annotations
@@ -11,14 +11,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from config import load_vars, project_root, require_live_conn
-from rdata.schema import (
-    CLOB_COLS,
-    DATE_COLS,
-    NUMBER_COLS,
-    oracle_comment_statements,
-    oracle_ddl,
-)
+from core.config import load_vars, project_root, require_live_conn
+from rdata.schema import CLOB_COLS, DATE_COLS, NUMBER_COLS
 
 TABLE_DEFAULT = "DW_INF_CONSOL_RDATA"
 ESQUEMA_DEFAULT = "APP"
@@ -45,19 +39,7 @@ def _bind_schema(cur) -> str:
     return str(cur.fetchone()[0])
 
 
-def _user_tablespace(cur) -> str:
-    cur.execute(
-        """
-        SELECT tablespace_name FROM user_ts_quotas
-        WHERE max_bytes = -1 OR bytes > 0
-        ORDER BY CASE WHEN tablespace_name = 'USERS' THEN 0 ELSE 1 END, tablespace_name
-        """
-    )
-    rows = [r[0] for r in cur.fetchall()]
-    return rows[0] if rows else "USERS"
-
-
-def _table_exists(cur, schema: str, table: str) -> bool:
+def _table_exists(cur, table: str) -> bool:
     cur.execute(
         "SELECT COUNT(*) FROM user_tables WHERE table_name = :1",
         [table.upper()],
@@ -104,7 +86,6 @@ def _coerce(v, col: str):
     if col in CLOB_COLS or col == "HECHO_VERIF":
         return None if v is None else str(v)
     s = str(v)
-    # Alinear con DDL (VARCHAR2 500/1000/2000); truncar por bytes UTF-8
     return _trunc_varchar(s, 2000)
 
 
@@ -113,7 +94,7 @@ def escribir_oracle(
     root: Path | None = None,
     table: str = TABLE_DEFAULT,
 ) -> int:
-    """Wipe+DDL+INSERT APP.<table>. Devuelve filas en BD."""
+    """TRUNCATE + INSERT APP.<table>. Falla si la tabla no existe."""
     root = root or project_root()
     if df is None:
         raise ValueError("escribir_oracle: df es None")
@@ -128,25 +109,14 @@ def escribir_oracle(
         if schema.upper() != ESQUEMA_DEFAULT.upper():
             print(f"DW: esquema sesión = {schema} (esperado {ESQUEMA_DEFAULT})", flush=True)
 
-        ts = _user_tablespace(cur)
-        if _table_exists(cur, schema, table):
-            cur.execute(f"DROP TABLE {schema}.{table} PURGE")
-            print(f"DW: DROP TABLE {schema}.{table}", flush=True)
+        if not _table_exists(cur, table):
+            raise RuntimeError(
+                f"No existe {schema}.{table}. "
+                f"Créala una vez con sql/dw/ (no se hace DROP+CREATE en corrida)."
+            )
 
-        ddl = oracle_ddl(schema, table)
-        # inject tablespace before end
-        ddl_ts = ddl.rstrip() + f" TABLESPACE {ts}"
-        print(f"DW: CREATE {schema}.{table} (TABLESPACE {ts})...", flush=True)
-        cur.execute(ddl_ts)
-
-        comment_stmts = oracle_comment_statements(schema, table)
-        for stmt in comment_stmts:
-            cur.execute(stmt)
-        print(
-            f"DW: COMMENT ON {schema}.{table} "
-            f"({len(comment_stmts) - 1} columnas)",
-            flush=True,
-        )
+        cur.execute(f"TRUNCATE TABLE {schema}.{table}")
+        print(f"DW: TRUNCATE {schema}.{table}", flush=True)
 
         cols = list(df.columns)
         if cols and len(df):
@@ -174,7 +144,6 @@ def escribir_oracle(
                 f"Conteo Oracle {n_bd} != DataFrame {len(df)} — carga incompleta"
             )
 
-        # Desglose (tablas canónicas con FUENTE/ANIO)
         if n_bd and cols and "FUENTE" in cols and "ANIO" in cols:
             cur.execute(
                 f"SELECT FUENTE, ANIO, COUNT(*) FROM {schema}.{table} "
@@ -183,7 +152,7 @@ def escribir_oracle(
             for fuente, anio, n in cur.fetchall():
                 print(f"DW:   {fuente} {anio}: {n}", flush=True)
         elif n_bd == 0:
-            print(f"DW:   (tabla vacía)", flush=True)
+            print("DW:   (tabla vacía)", flush=True)
 
         cur.close()
         return n_bd

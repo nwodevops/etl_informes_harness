@@ -2,7 +2,7 @@
 
 Ver [SKILL.md](SKILL.md) para arquitectura.
 
-## Introspección (`python/create_stg.py`)
+## Introspección (`python/stg/create_stg.py`)
 
 Reset H2 primero; Python lee `inputs.yaml`, introspecta, escribe `h2/sql/02_stg.sql` (gitignore) y aplica JDBC.
 

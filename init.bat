@@ -3,12 +3,15 @@ REM ===========================================================================
 REM init.bat — Harness Windows (equivalente a init.sh).
 REM Debe terminar en "HARNESS OK". Criterios: CHECKPOINTS.md
 REM Uso: init.bat [local|remote]    (default: remote)
-REM Destino: DW_INF_CONSOL_RDATA + DW_INF_CONSOL_FORM + DW_INF_CSEP_INFORMES_VIEW
+REM RData=Python; FORM/CSEP=hop-run (hard-fail). Tablas DW precreadas (sql\dw).
 REM ===========================================================================
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 set "H2_JAR=%~dp0h2\lib\h2-2.4.240.jar"
+set "HOP_PROJECT=etl_informes_harness"
+if not "%HOP_PROJECT_OVERRIDE%"=="" set "HOP_PROJECT=%HOP_PROJECT_OVERRIDE%"
+set "HOP_RUNCONFIG=local"
 
 set "ENV=%~1"
 if "%ENV%"=="" set "ENV=remote"
@@ -16,6 +19,15 @@ echo ==^> Harness Windows: entorno %ENV%
 
 set "PY=%~dp0.venv\Scripts\python.exe"
 if not exist "%PY%" set "PY=python"
+
+REM ---- hop-run.bat ----
+set "HOP_RUN="
+if defined HOP_HOME if exist "%HOP_HOME%\hop-run.bat" set "HOP_RUN=%HOP_HOME%\hop-run.bat"
+if "%HOP_RUN%"=="" if exist "%USERPROFILE%\apps\hop\hop-run.bat" set "HOP_RUN=%USERPROFILE%\apps\hop\hop-run.bat"
+if "%HOP_RUN%"=="" (
+  echo FAIL: hop-run.bat no encontrado ^(HOP_HOME o %%USERPROFILE%%\apps\hop^)
+  exit /b 1
+)
 
 REM ---- feature_list.json: max una in_progress ----
 echo ==^> Validando feature_list.json
@@ -40,13 +52,13 @@ if not exist "%~dp0.venv\Scripts\python.exe" (
   echo FAIL: venv ausente o roto. Crear con: python -m venv .venv ^&^& .venv\Scripts\python -m pip install -r python\requirements.txt
   exit /b 1
 )
-"%PY%" -c "import yaml, pandas, jaydebeapi, pymysql" >nul 2>&1
+"%PY%" -c "import yaml, pandas, jaydebeapi" >nul 2>&1
 if errorlevel 1 (
   echo FAIL: el .venv no tiene dependencias. .venv\Scripts\python -m pip install -r python\requirements.txt
   exit /b 1
 )
 
-REM ---- Rscript (suele no estar en PATH; se agrega su dir al PATH) ----
+REM ---- Rscript ----
 where Rscript >nul 2>&1
 if errorlevel 1 (
   for /d %%d in ("C:\Program Files\R\R-*") do (
@@ -79,7 +91,7 @@ if errorlevel 1 (
 
 REM ---- Python create STG ----
 echo ==^> Python create STG
-"%PY%" python\create_stg.py
+"%PY%" python\stg\create_stg.py
 if errorlevel 1 (
   echo FAIL: create_stg.py
   exit /b 1
@@ -87,23 +99,14 @@ if errorlevel 1 (
 
 REM ---- Stage RData ----
 echo ==^> Stage RData -^> STG_INF_CONSOL
-set "PATH=%PATH%;%~dp0h2\scripts"
-"%PY%" python\stage_rdata.py
+"%PY%" python\stage\stage_rdata.py
 if errorlevel 1 (
   echo FAIL: stage_rdata.py
   exit /b 1
 )
 
-REM ---- Stage MySQL soft ----
-echo ==^> Stage MySQL -^> STG_INF_CONSOL_FORM ^(soft^)
-"%PY%" python\stage_mysql.py --soft
-if errorlevel 1 (
-  echo FAIL: stage_mysql.py --soft
-  exit /b 1
-)
-
-REM ---- Python main (siempre RDATA + FORM) ----
-echo ==^> Python main ^(DW_INF_CONSOL_RDATA + DW_INF_CONSOL_FORM siempre^)
+REM ---- Python main (solo RDATA) ----
+echo ==^> Python main ^(DW_INF_CONSOL_RDATA TRUNCATE^)
 set "LOG=%TEMP%\init_harness_main.log"
 "%PY%" python\main.py > "%LOG%" 2>&1
 set "MAIN_RC=!ERRORLEVEL!"
@@ -113,17 +116,22 @@ if not "!MAIN_RC!"=="0" (
   exit /b 1
 )
 
-REM ---- CSEP soft + load ----
-echo ==^> CSEP_INFORMES_VIEW -^> DW_INF_CSEP_INFORMES_VIEW ^(soft + load^)
-"%PY%" python\ddl_csep_informes.py --load --soft >> "%LOG%" 2>&1
-set "CSEP_RC=!ERRORLEVEL!"
-type "%LOG%" | findstr /C:"Destino:" /C:"AVISO:" /C:"ERROR:" /C:"Fuente:"
-if not "!CSEP_RC!"=="0" (
-  echo FAIL: ddl_csep_informes.py termino con codigo !CSEP_RC!
+REM ---- Hop FORM + CSEP (hard-fail) ----
+echo ==^> hop-run pl_form_informes.hpl
+call "%HOP_RUN%" -j %HOP_PROJECT% -r %HOP_RUNCONFIG% -f "%~dp0pipelines\pl_form_informes.hpl" -l Basic
+if errorlevel 1 (
+  echo FAIL: hop-run pl_form_informes.hpl
   exit /b 1
 )
 
-echo ==^> Comprobando salidas ^(3 tablas destino^)
+echo ==^> hop-run pl_csep_informes.hpl
+call "%HOP_RUN%" -j %HOP_PROJECT% -r %HOP_RUNCONFIG% -f "%~dp0pipelines\pl_csep_informes.hpl" -l Basic
+if errorlevel 1 (
+  echo FAIL: hop-run pl_csep_informes.hpl
+  exit /b 1
+)
+
+echo ==^> Comprobando salidas RData
 findstr /C:"Salida RESULTADO" "%LOG%" >nul
 if errorlevel 1 (
   echo FAIL: no hay Salida RESULTADO en el log
@@ -132,16 +140,6 @@ if errorlevel 1 (
 findstr /C:"DW_INF_CONSOL_RDATA" "%LOG%" >nul
 if errorlevel 1 (
   echo FAIL: no hay carga Oracle DW_INF_CONSOL_RDATA en el log
-  exit /b 1
-)
-findstr /C:"DW_INF_CONSOL_FORM" "%LOG%" >nul
-if errorlevel 1 (
-  echo FAIL: no hay carga Oracle DW_INF_CONSOL_FORM en el log
-  exit /b 1
-)
-findstr /C:"Destino: CREATE DW_INF_CSEP_INFORMES_VIEW" "%LOG%" >nul
-if errorlevel 1 (
-  echo FAIL: no hay CREATE DW_INF_CSEP_INFORMES_VIEW en el log
   exit /b 1
 )
 findstr /C:"Excel:" "%LOG%" >nul
@@ -154,5 +152,5 @@ if not errorlevel 1 (
 )
 
 echo.
-echo HARNESS OK — 3 tablas: DW_INF_CONSOL_RDATA, DW_INF_CONSOL_FORM, DW_INF_CSEP_INFORMES_VIEW
+echo HARNESS OK — 3 tablas: DW_INF_CONSOL_RDATA ^(Python^), DW_INF_CONSOL_FORM + DW_INF_CSEP_INFORMES_VIEW ^(Hop^)
 exit /b 0

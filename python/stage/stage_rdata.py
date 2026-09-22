@@ -16,11 +16,12 @@ from pathlib import Path
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-if str(HERE) not in sys.path:
-    sys.path.insert(0, str(HERE))
+_PY = HERE.parent
+if str(_PY) not in sys.path:
+    sys.path.insert(0, str(_PY))
 
-from config import load_sources, load_vars, project_root  # noqa: E402
-from h2_conn import connect_h2  # noqa: E402
+from core.config import load_sources, load_vars, project_root  # noqa: E402
+from core.h2_conn import connect_h2  # noqa: E402
 from rdata.map import (  # noqa: E402
     map_to_canonical,
     parse_anio_from_name,

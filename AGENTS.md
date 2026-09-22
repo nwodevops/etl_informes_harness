@@ -2,7 +2,7 @@
 
 ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md`](docs/arquitectura.md).
 
-**Verificación:** [`./init.sh`](init.sh) [`./init.bat`](init.bat) debe terminar en **`HARNESS OK`**. Criterios: [`CHECKPOINTS.md`](CHECKPOINTS.md) (algunos checkpoints Fase 1-3 aún hablan del `demo.py`/arquetipo; el flujo real es informes RData + FORM).
+**Verificación:** [`./init.sh`](init.sh) [`./init.bat`](init.bat) debe terminar en **`HARNESS OK`**. Criterios: [`CHECKPOINTS.md`](CHECKPOINTS.md).
 
 ## Harness
 
@@ -24,6 +24,7 @@ ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md
 
 ```bash
 ./switch-env.sh local
+# Una vez: sql/dw/*.sql en oracle_dw (APP)
 ./init.sh
 ~/apps/hop/hop-gui.sh   # → wf_main.hwf
 ```
@@ -37,46 +38,59 @@ ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md
 ```
 
 - Python: `.venv\Scripts\python.exe`
-- H2: `h2\scripts\reset_and_create.bat` (servicio/tarea `H2_SERVICE_MEM_CSEP` según scripts bat)
+- Hop: `HOP_HOME` o `~/apps/hop` (`hop-run` obligatorio en init)
+- H2: `h2\scripts\reset_and_create.bat`
 - `Rscript`: se busca en `C:\Program Files\R\R-*` si no está en PATH
-- `switch-env.ps1` no pisa valores reales de `project-config.json` si la plantilla trae placeholders `<...>`
 
 ## Verificación
 
-`init.sh` / `init.bat` → **HARNESS OK** con **3 tablas** en oracle_dw:
+`init.sh` / `init.bat` → **HARNESS OK** con **3 tablas** en oracle_dw (precreadas en [`sql/dw/`](sql/dw/)):
 
-1. `DW_INF_CONSOL_RDATA`
-2. `DW_INF_CONSOL_FORM` (siempre; vacía si MySQL cae)
-3. `DW_INF_CSEP_INFORMES_VIEW` (stub vacío si SISUD cae)
+1. `DW_INF_CONSOL_RDATA` — Python TRUNCATE+INSERT
+2. `DW_INF_CONSOL_FORM` — Hop `pl_form_informes` (hard-fail si MySQL cae)
+3. `DW_INF_CSEP_INFORMES_VIEW` — Hop `pl_csep_informes` (hard-fail si SISUD cae)
 
-Requiere Java, jar H2, `.venv` (`pyyaml pandas jaydebeapi pymysql`), **Rscript**, y Oracle DW vivo. MySQL/SISUD van en modo soft.
+Requiere Java, jar H2, `.venv` (`pyyaml pandas jaydebeapi`), **Rscript**, **hop-run**, Oracle DW, MySQL y SISUD vivos.
+
+## Preferir Apache Hop
+
+**Siempre intentar Hop primero** para extract/load 1:1 (TableInput → TableOutput truncate). Python solo cuando hace falta homologación, QA, joins o reglas en `logica/`.
+
+| Workflow | Rol |
+|---|---|
+| [`workflows/wf_create_stg.hwf`](workflows/wf_create_stg.hwf) | **Diseño / DDL STG:** crea las tablas `STG_*` en H2 (deja H2 vivo para mapear pipelines). No es la corrida de producción. |
+| [`workflows/wf_main.hwf`](workflows/wf_main.hwf) (Windows: `wf_main_windows`) | **Corrida habitual:** se ejecuta siempre; asume el contrato STG ya definido vía `wf_create_stg` / `inputs.yaml`. Orquesta stage + lógica + destinos. |
+
+Oracle DW (`DW_INF_*`): CREATE **una vez** en [`sql/dw/`](sql/dw/); en corrida solo TRUNCATE+INSERT (Hop o Python). H2 es in-memory: en cada `wf_main` se recrea el DDL STG porque el mem se pierde al reset.
 
 ## Reglas críticas
 
-1. **Un solo `.py`** en `logica/` (hoy: `informes_rdata.py`) — solo reglas post-STG.
-2. **Sin secretos** en git. `project-config.json` es generado; gitignored: `client_secret.json`, `docs/credenciales/`, `input/input_mysql/tablas.txt`, `h2/sql/02_stg.sql`. Los `environments/*.json` traen valores placeholder `<...>` **más hints reales en las `description`** (apuntan a `docs/credenciales/`) — no commitear valores nuevos.
+1. **Un solo `.py`** en `logica/` (hoy: `informes_rdata.py`) — solo reglas post-STG RData.
+2. **Sin secretos** en git. `project-config.json` es generado; gitignored: `client_secret.json`, `docs/credenciales/`, `input/input_mysql/tablas.txt`, `h2/sql/02_stg.sql`.
 3. **Sin `${VAR}` literal** en logs Hop = variable mal definida.
-4. `logica/` no abre conexiones. I/O en `python/io/`. Homologación RData en `python/rdata/` + `stage_rdata.py`.
+4. `logica/` no abre conexiones. I/O en `python/io/`. Homologación RData en `python/rdata/` + `python/stage/stage_rdata.py`.
 5. `python/io/leer_h2.py` y sus pares se cargan por ruta en `main.py`; **no** hacer `import io` (choca con stdlib).
+6. Destino Oracle: **TRUNCATE** (no DROP). DDL una vez en `sql/dw/`.
+7. Cargas 1:1 (FORM, CSEP, etc.) → **pipelines Hop**, no scripts Python de extract/load.
 
 ## Flujo informes (RData + FORM + CSEP)
 
-`wf_main` / `./init.sh` dejan **3 tablas** en oracle_dw:
+```
+inputs.yaml → python/stg/create_stg.py → python/stage/stage_rdata.py
+  → python/main.py → DW_INF_CONSOL_RDATA
+hop-run pipelines/pl_form_informes.hpl → DW_INF_CONSOL_FORM
+hop-run pipelines/pl_csep_informes.hpl → DW_INF_CSEP_INFORMES_VIEW
+```
 
-1. `DW_INF_CONSOL_RDATA` (RData)
-2. `DW_INF_CONSOL_FORM` (MySQL HEC; **siempre** se crea, aunque MySQL caiga o vaya vacío)
-3. `DW_INF_CSEP_INFORMES_VIEW` (vista SISUD `CSEP_INFORMES_VIEW` vía DDL + `pl_csep_informes`; stub vacío si SISUD cae)
-
-`inputs.yaml` → `create_stg.py` → `stage_rdata.py` / `stage_mysql.py --soft` → `main.py` → `ddl_csep_informes.py --load --soft`.  
-Mapa RData: [`docs/rdata_column_map.md`](docs/rdata_column_map.md). SQL HEC: [`input/input_mysql/`](input/input_mysql/).
+Mapa RData: [`docs/rdata_column_map.md`](docs/rdata_column_map.md). SQL HEC: [`input/input_mysql/`](input/input_mysql/). Layout: [`python/LEEME.md`](python/LEEME.md).
 
 | OS | Harness | Workflow Hop |
 |---|---|---|
 | Linux | [`init.sh`](init.sh) | [`workflows/wf_main.hwf`](workflows/wf_main.hwf) |
 | Windows | [`init.bat`](init.bat) | [`workflows/wf_main_windows.hwf`](workflows/wf_main_windows.hwf) |
 
-CSEP opcional vía Hop: [`pl_csep_informes.hpl`](pipelines/pl_csep_informes.hpl) / [`wf_csep_informes*.hwf`](workflows/wf_csep_informes.hwf). En `wf_main` la carga CSEP es Python (`--load --soft`) para no tumbar el wf si SISUD está caído.
+CSEP standalone: [`wf_csep_informes*.hwf`](workflows/wf_csep_informes.hwf) (solo pipeline).
 
 ## Nuevo proyecto
 
-Este repo es un cascarón. Fuentes → `inputs.yaml`. Lecturas → `python/io/leer_h2.py`. Transformación → `logica/<tu>.py`. Destino DW → `escribir_oracle.py`.
+Fuentes STG → `inputs.yaml`. Lecturas → `python/io/leer_h2.py`. Transformación → `logica/<tu>.py`. Destino DW RData → `escribir_oracle.py` (TRUNCATE). Cargas 1:1 → pipelines Hop.

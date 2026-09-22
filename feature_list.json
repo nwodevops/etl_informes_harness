@@ -45,15 +45,15 @@
       "id": "fase-6-mysql-form",
       "title": "MySQL HEC → APP.DW_INF_CONSOL_FORM",
       "status": "done",
-      "criterio": "STG_INF_CONSOL_FORM + DW_INF_CONSOL_FORM; RData sigue en DW_INF_CONSOL_RDATA; init.sh HARNESS OK",
-      "doc": "input/input_mysql/README.md"
+      "criterio": "pl_form_informes.hpl TRUNCATE DW_INF_CONSOL_FORM; hard-fail MySQL; sql/dw CREATE una vez",
+      "doc": "pipelines/pl_form_informes.hpl"
     },
     {
       "id": "fase-7-hop-csep-informes",
       "title": "Hop CSEP_INFORMES_VIEW → DW_INF_CSEP_INFORMES_VIEW",
       "status": "done",
-      "criterio": "wf_main: ddl_csep_informes.py --load --soft; tabla DW_INF_CSEP_INFORMES_VIEW en oracle_dw (stub si SISUD cae)",
-      "doc": "python/ddl_csep_informes.py"
+      "criterio": "wf_main + init hop-run pl_csep_informes; TRUNCATE; hard-fail SISUD; sql/dw CREATE una vez",
+      "doc": "pipelines/pl_csep_informes.hpl"
     }
   ]
 }

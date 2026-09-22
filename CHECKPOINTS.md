@@ -18,7 +18,7 @@ Verificación: [`./init.sh`](init.sh).
 ## Fase 1 — Entorno {#fase-1}
 
 - [ ] H2 levanta en puerto 9092 (`reset_and_create.sh`).
-- [ ] `python/create_stg.py` OK (puede ser no-op con `sources: []`).
+- [ ] `python/stg/create_stg.py` OK (puede ser no-op con `sources: []`).
 - [ ] `python/main.py` OK con `logica/demo.py`.
 - [ ] `wf_main.hwf` ejecutable en Hop GUI.
 

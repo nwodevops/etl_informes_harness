@@ -3,7 +3,7 @@
   <info>
     <name>pl_csep_informes</name>
     <name_sync_with_filename>Y</name_sync_with_filename>
-    <description>Oracle SISUD CSEP_INFORMES_VIEW → oracle_dw DW_INF_CSEP_INFORMES_VIEW (full refresh; DDL previo en ddl_csep_informes.py)</description>
+    <description>Oracle SISUD CSEP_INFORMES_VIEW → oracle_dw DW_INF_CSEP_INFORMES_VIEW (truncate; tabla precreada)</description>
     <extended_description/>
     <pipeline_version/>
     <pipeline_type>Normal</pipeline_type>
@@ -21,7 +21,7 @@
   </info>
   <notepads>
     <notepad>
-      <note>Prerrequisito: python/ddl_csep_informes.py (DROP+CREATE DW_INF_CSEP_INFORMES_VIEW). Conexiones: oracle_sisud → oracle_dw.</note>
+      <note>Prerrequisito: CREATE DW_INF_CSEP_INFORMES_VIEW (sql/dw/). Hard-fail si SISUD cae. Conexiones: oracle_sisud → oracle_dw.</note>
       <xloc>48</xloc>
       <yloc>32</yloc>
       <width>520</width>

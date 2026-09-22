@@ -29,11 +29,14 @@ CONNECTION_PREFIX = {
 
 
 def project_root(start: Path | None = None) -> Path:
-    """Raíz del repo Hop (padre de python/)."""
+    """Raíz del repo Hop (donde está inputs.yaml / project-config.json)."""
     here = (start or Path(__file__).resolve()).parent
-    if here.name == "python":
-        return here.parent
-    return here
+    for p in [here, *here.parents]:
+        if (p / "inputs.yaml").is_file() and (p / "python").is_dir():
+            return p
+    raise FileNotFoundError(
+        "No se encuentra la raíz del proyecto (inputs.yaml junto a python/)"
+    )
 
 
 def load_vars(root: Path) -> dict[str, str]:

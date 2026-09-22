@@ -8,7 +8,7 @@
 # el server corre como tarea independiente (start_h2_svc.bat).
 #
 # H2 es in-memory (mem:csep): al parar el server se limpia sola. El reset no
-# ejecuta sql/02_stg.sql (eso lo hace python/create_stg.py).
+# ejecuta sql/02_stg.sql (eso lo hace python/stg/create_stg.py).
 set -euo pipefail
 
 cd "$(dirname "$(readlink -f "$0")")/.."

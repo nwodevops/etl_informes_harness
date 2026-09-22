@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pipeline>
+  <info>
+    <name>pl_form_informes</name>
+    <name_sync_with_filename>Y</name_sync_with_filename>
+    <description>MySQL gappsdb (vw_inf_consol_simil.sql) → oracle_dw DW_INF_CONSOL_FORM (truncate; tabla precreada)</description>
+    <extended_description/>
+    <pipeline_version/>
+    <pipeline_type>Normal</pipeline_type>
+    <parameters>
+    </parameters>
+    <capture_transform_performance>N</capture_transform_performance>
+    <transform_performance_capturing_delay>1000</transform_performance_capturing_delay>
+    <transform_performance_capturing_size_limit>100</transform_performance_capturing_size_limit>
+    <created_user>-</created_user>
+    <created_date>2026/09/22 12:00:00.000</created_date>
+    <modified_user>-</modified_user>
+    <modified_date>2026/09/22 12:00:00.000</modified_date>
+    <key_for_session_key>H4sIAAAAAAAAAAMAAAAAAAAAAAA=</key_for_session_key>
+    <is_key_private>N</is_key_private>
+  </info>
+  <notepads>
+    <notepad>
+      <note>Prerrequisito: CREATE APP.DW_INF_CONSOL_FORM (sql/dw/). Hard-fail si MySQL cae. SQL fuente: input/input_mysql/vw_inf_consol_simil.sql</note>
+      <xloc>48</xloc>
+      <yloc>32</yloc>
+      <width>560</width>
+      <heigth>48</heigth>
+      <fontname>Segoe UI</fontname>
+      <fontsize>11</fontsize>
+      <fontbold>N</fontbold>
+      <fontitalic>N</fontitalic>
+      <fontcolorred>14</fontcolorred>
+      <fontcolorgreen>58</fontcolorgreen>
+      <fontcolorblue>90</fontcolorblue>
+      <backgroundcolorred>201</backgroundcolorred>
+      <backgroundcolorgreen>232</backgroundcolorgreen>
+      <backgroundcolorblue>251</backgroundcolorblue>
+      <bordercolorred>14</bordercolorred>
+      <bordercolorgreen>58</bordercolorgreen>
+      <bordercolorblue>90</bordercolorblue>
+    </notepad>
+  </notepads>
+  <order>
+    <hop>
+      <from>Table input MySQL</from>
+      <to>Table output FORM</to>
+      <enabled>Y</enabled>
+    </hop>
+  </order>
+  <transform>
+    <name>Table input MySQL</name>
+    <type>TableInput</type>
+    <description>SQL HEC canónico (input/input_mysql/vw_inf_consol_simil.sql)</description>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>mysql</connection>
+    <sql>-- Simil APP.DW_INF_CONSOL_RDATA desde gappsdb (sistema informes HEC)
+-- Grano: 1 fila por HECHO (T_MVC_HECHOS_HEC), denormalizado con informe + admin/UF.
+-- Actualizado 2026-09-21: FUENTE BD|OD, docs tipados, oficina.
+-- Solo columnas SIN origen en tabla: CHAR/DATE → '--' ; NUMBER → -1
+--
+-- Detalle ER / huecos: mapa_mysql_vs_rdata.md
+
+WITH oficina AS (
+  SELECT
+    PK_OFICINA,
+    TX_DESCRIPCION,
+    NU_PADRE,
+    CASE
+      WHEN NU_PADRE = 'SUO00006'
+        OR TX_DESCRIPCION LIKE 'Oficina Desconcentrada%'
+        OR TX_DESCRIPCION LIKE 'Oficina de Enlace%'
+      THEN 'OD'
+      ELSE 'SEDE'
+    END AS TIPO_FUENTE
+  FROM T_SEP_OFICINA
+),
+admuf AS (
+  SELECT
+    a.NU_IDINFORME,
+    a.NU_IDADMINISTRADO AS ID_ADMINISTRADO,
+    COALESCE(adm.TX_NOM_ADMINISTRADO, a.TX_CODADMINISTRADO) AS ADMIN,
+    a.NU_IDUF AS ID_UF,
+    COALESCE(uf.TX_UNIDADFISCALIZABLE, a.TX_CODUF) AS UF,
+    uf.TX_SUBSECTOR_UND AS SECTOR_UF,
+    ROW_NUMBER() OVER (
+      PARTITION BY a.NU_IDINFORME ORDER BY a.NU_IDADMUF
+    ) AS rn
+  FROM T_MVC_ADMUF_HEC a
+  LEFT JOIN T_MAP_ADMINISTRADO adm
+    ON adm.NU_ID_ADMINISTRADO = a.NU_IDADMINISTRADO
+  LEFT JOIN T_MAP_UNIDAD_FISCALIZABLE uf
+    ON uf.NU_ID_UNIDAD_FISC = a.NU_IDUF
+),
+/* NU_IDTIPODOC: 1=cierre (Carta/Memo/Oficio), 2=inicio/proveído, 3=doc previo */
+doc_tipo AS (
+  SELECT
+    NU_IDINFORME,
+    MAX(CASE WHEN NU_IDTIPODOC = 1 THEN TX_NUMDOC END) AS DOC_CIERRE,
+    MAX(CASE WHEN NU_IDTIPODOC = 1 THEN FE_FECHADOC END) AS FECHA_DOC_TIPO1,
+    MAX(CASE WHEN NU_IDTIPODOC = 1 THEN
+      CASE NU_DETALLETIPODOC
+        WHEN 1 THEN 'CARTA'
+        WHEN 2 THEN 'MEMORANDO'
+        WHEN 3 THEN 'OFICIO'
+        ELSE CAST(NU_DETALLETIPODOC AS CHAR)
+      END
+    END) AS TIPO_DOC_CIERRE,
+    MAX(CASE WHEN NU_IDTIPODOC = 2 THEN TX_NUMDOC END) AS DOC_INICIO,
+    MAX(CASE WHEN NU_IDTIPODOC = 2 THEN FE_FECHADOC END) AS FECHA_DOC_INICIO,
+    MAX(CASE WHEN NU_IDTIPODOC = 3 THEN TX_NUMDOC END) AS DOC_PREVIO,
+    MAX(CASE WHEN NU_IDTIPODOC = 3 THEN FE_FECHADOC END) AS FECHA_DOC_PREVIO
+  FROM (
+    SELECT
+      d.*,
+      ROW_NUMBER() OVER (
+        PARTITION BY d.NU_IDINFORME, d.NU_IDTIPODOC
+        ORDER BY
+          CASE
+            WHEN d.NU_IDTIPODOC = 1
+             AND d.FE_FECHADOC = (
+               SELECT i2.FE_FECHADOCCIERRE
+               FROM T_MVC_INFORME_HEC i2
+               WHERE i2.NU_IDINFORME = d.NU_IDINFORME
+             ) THEN 0
+            ELSE 1
+          END,
+          d.FE_FECHADOC DESC,
+          d.NU_IDDOCUMENTO DESC
+      ) AS rn
+    FROM T_MVC_DOCUMENTOS_HEC d
+  ) x
+  WHERE rn = 1
+  GROUP BY NU_IDINFORME
+),
+comp AS (
+  SELECT
+    c.NU_IDHECHO,
+    MAX(CASE WHEN UPPER(m.TX_COMPONENTE) IN ('HUMANO', 'HUMANOS')
+              AND c.FG_COMPONENTE IN ('1', 'S', 'Y') THEN 1 ELSE 0 END) AS HUMANOS,
+    MAX(CASE WHEN UPPER(m.TX_COMPONENTE) = 'AIRE'
+              AND c.FG_COMPONENTE IN ('1', 'S', 'Y') THEN 1 ELSE 0 END) AS AIRE,
+    MAX(CASE WHEN UPPER(m.TX_COMPONENTE) = 'FLORA'
+              AND c.FG_COMPONENTE IN ('1', 'S', 'Y') THEN 1 ELSE 0 END) AS FLORA,
+    MAX(CASE WHEN UPPER(m.TX_COMPONENTE) = 'FAUNA'
+              AND c.FG_COMPONENTE IN ('1', 'S', 'Y') THEN 1 ELSE 0 END) AS FAUNA,
+    MAX(CASE WHEN UPPER(m.TX_COMPONENTE) = 'AGUA'
+              AND c.FG_COMPONENTE IN ('1', 'S', 'Y') THEN 1 ELSE 0 END) AS AGUA,
+    MAX(CASE WHEN UPPER(m.TX_COMPONENTE) = 'SUELO'
+              AND c.FG_COMPONENTE IN ('1', 'S', 'Y') THEN 1 ELSE 0 END) AS SUELO
+  FROM T_MVC_COMPONENTES_HEC c
+  JOIN T_MAP_COMPONENTE_HEC m ON m.NU_IDCOMPONENTE = c.NU_IDCOMPONENTE
+  GROUP BY c.NU_IDHECHO
+),
+hec_cnt AS (
+  SELECT NU_IDINFORME, COUNT(*) AS TOTAL_HECHOS
+  FROM T_MVC_HECHOS_HEC
+  GROUP BY NU_IDINFORME
+),
+hec_ord AS (
+  SELECT
+    NU_IDHECHOS,
+    NU_IDINFORME,
+    ROW_NUMBER() OVER (
+      PARTITION BY NU_IDINFORME ORDER BY NU_IDHECHOS
+    ) AS rn_hecho
+  FROM T_MVC_HECHOS_HEC
+),
+tiposup AS (
+  SELECT TX_CODIGO_CAT, TX_DETALLE_CAT
+  FROM T_MAP_CATALOGO
+  WHERE TX_TIPO_CAT = 'T_SUP'
+    AND COALESCE(TX_FG_ESTADO_REG, 'A') = 'A'
+),
+mes AS (
+  SELECT TX_MES, UPPER(TX_MES) AS MES_UP
+  FROM T_MAP_MES
+  WHERE COALESCE(FG_ESTADO, 'A') = 'A'
+)
+SELECT
+  /* —— proveniencia (RData: BD|OD) —— */
+  CASE
+    WHEN ofi.TIPO_FUENTE = 'OD' THEN 'OD'
+    WHEN ofi.TIPO_FUENTE = 'SEDE' THEN 'BD'
+    WHEN i.TX_NUMINFORME LIKE '%/ODES-%' OR NULLIF(TRIM(i.TX_SECTOR_OD), '') IS NOT NULL
+      THEN 'OD'
+    ELSE 'BD'
+  END AS FUENTE,
+  i.NU_ANIO AS ANIO,
+  COALESCE(mes.MES_UP, UPPER(i.TX_MES)) AS MES_CORTE,
+  'gappsdb' AS ARCHIVO,
+  'T_MVC_INFORME_HEC+HECHOS' AS OBJETO_R,
+
+  /* —— CORE (origen tabla; NULL = sin dato en fuente) —— */
+  i.TX_NUMINFORME AS INFORME,
+  i.FE_FECHAAPROBACION AS FECHA_INFORME,
+  i.TX_NUMEXPEDIENTE AS EXPEDIENTE,
+  med.TX_CUC AS CUC_INAPS,
+  af.ADMIN AS ADMIN,
+  af.UF AS UF,
+  h.TX_DESCRIPCION AS HECHO_VERIF,
+  h.TX_TIPIFICACIONHECHO AS TIPIFICA_HECHO,
+  h.TX_CLASIFICACIONHECHO AS CLASIF_HECHO,
+  h.TX_RESULTADO AS RESULT_HECHO,
+  h.TX_MOTIVOARCHIVO AS MOTIVO_ARCHIV_CONOC,
+  i.TX_RECOMENDACIONMANUAL AS RECOM_INFORME,
+  COALESCE(dt.DOC_CIERRE, dt.TIPO_DOC_CIERRE) AS DOC_CIERRE,
+  dt.DOC_CIERRE AS NRO_DOC_CIERRE,
+  COALESCE(i.FE_FECHADOCCIERRE, dt.FECHA_DOC_TIPO1) AS FECHA_DOC_CIERRE,
+  i.FE_FECHADERIVACION AS FECHA_DERIV,
+  i.FE_FECHAINICIO AS FEINICIO,
+  med.FE_FIN_DETECCION AS FEFIN,
+  COALESCE(ts.TX_DETALLE_CAT, NULLIF(i.TX_IDTIPOSUPERVISION, '0'), NULL) AS TIPOSUP_INAPS,
+  CASE
+    WHEN i.FG_SUPORIENTATIVA IN ('1', 'S', 'Y') THEN 'SI'
+    WHEN i.FG_SUPORIENTATIVA IN ('0', 'N') THEN 'NO'
+    ELSE i.FG_SUPORIENTATIVA
+  END AS SUPERV_ORIENTATIVA,
+  COALESCE(mes.MES_UP, UPPER(i.TX_MES)) AS MES_META,
+  CASE
+    WHEN i.FG_INFORMEEVALUACION IN ('1', 'S', 'Y') THEN 'EVALUACION'
+    ELSE NULL
+  END AS TIPO_INF,
+  COALESCE(ofi.TX_DESCRIPCION, i.TX_COORDINACION) AS TXCOORDINACION,
+  i.NU_OBLIGCUMPLIDAS AS OBLIG_CUMPL,
+  CASE
+    WHEN h.FG_INCUMPLIO_OBLIGACION IN ('1', 'S', 'Y') THEN 1
+    ELSE 0
+  END AS OBL_INCUMPLIDA,
+  NULLIF(TRIM(h.TX_SUBSANO), '') AS SUBSANA,
+  /* desde TX_CLASIFICACIONHECHO (catálogo CH: Leve / Trascendente) */
+  CASE
+    WHEN h.TX_CLASIFICACIONHECHO IS NULL OR TRIM(h.TX_CLASIFICACIONHECHO) = '' THEN NULL
+    WHEN UPPER(TRIM(h.TX_CLASIFICACIONHECHO)) = 'LEVE' THEN 1
+    ELSE 0
+  END AS SUBS_LEVE,
+  CASE
+    WHEN h.TX_CLASIFICACIONHECHO IS NULL OR TRIM(h.TX_CLASIFICACIONHECHO) = '' THEN NULL
+    WHEN UPPER(TRIM(h.TX_CLASIFICACIONHECHO)) IN (
+      'TRASCENDENTE', 'TRASCENDETE', 'MODERADO', 'SIGNIFICATIVO'
+    ) THEN 1
+    ELSE 0
+  END AS SUBS_TRAS,
+  CASE
+    WHEN h.TX_SUBSANO IS NULL OR TRIM(h.TX_SUBSANO) = '' THEN NULL
+    WHEN UPPER(TRIM(h.TX_SUBSANO)) IN ('NO SUBSANÓ', 'NO SUBSANO', 'NO APLICA') THEN 0
+    WHEN UPPER(TRIM(h.TX_SUBSANO)) LIKE 'NO %' THEN 0
+    ELSE 1
+  END AS SUBSANADO,
+  -1 AS CUMPLIM_ADD,
+  CASE WHEN COALESCE(ho.rn_hecho, 1) = 1 THEN 1 ELSE 0 END AS FILTRO_INF_UNIQ,
+  i.TX_TIPOACCION AS TIPOACCION_INAPS,
+  i.FE_FECHAAPROBACION AS FECHA_REAL,
+  YEAR(i.FE_FECHAAPROBACION) AS YEAR_APROB,
+  i.FE_FECHAINICIO AS FEINI_ELAB_INF,
+  CASE WHEN dt.DOC_PREVIO IS NOT NULL THEN 'DOCUMENTO_PREVIO' ELSE NULL END
+    AS TX_DOCUMENTO_PREVIO,
+  dt.DOC_PREVIO AS TX_NUMERO_DOCUMENTO_PREVIO,
+  dt.FECHA_DOC_PREVIO AS FE_DOCUMENTO_PREVIO,
+  /* sin origen en tabla → marcador */
+  '--' AS FE_REGISTRO_DOCUMENTO_PREVIO,
+  '--' AS TX_OTRO_DOCUMENTO_PREVIO,
+  i.FE_FECHADERIVACION AS FE_DERIV_DOC_DERIVACION,
+
+  /* —— EQUIV —— */
+  CAST(af.ID_ADMINISTRADO AS CHAR) AS ID_ADMINISTRADO,
+  CAST(af.ID_UF AS CHAR) AS ID_UF,
+  COALESCE(i.TX_RECOMENDACIONINAF, i.TX_RECOMENDACIONMANUAL) AS RECOM_ACCION,
+  COALESCE(
+    NULLIF(TRIM(i.TX_SECTOR_OD), ''),
+    af.SECTOR_UF,
+    med.TX_SECTOR
+  ) AS SECTOR_O_SUBSECTOR,
+
+  /* —— EXTRAS BD —— */
+  /* sin origen en tabla → marcador */
+  '--' AS DIREC,
+  NULLIF(TRIM(i.TX_IDCOORDINADOR), '') AS COORDINADOR,
+  NULLIF(TRIM(i.TX_IDDIRECTOR), '') AS DIRECTOR,
+  dt.DOC_INICIO AS DOC_INICIO_ELA,
+  dt.FECHA_DOC_INICIO AS FECHA_INICIO_ELA,
+  dt.DOC_INICIO AS PROVEIDO,
+  dt.FECHA_DOC_INICIO AS FECHA_PROV,
+  h.TX_TIPOINFRACCION AS TIPO_INFRACCION,
+  h.TX_DANIO AS `DAÑO_RIESGO_ASOCIADO`,
+  COALESCE(comp.HUMANOS, 0) AS HUMANOS,
+  COALESCE(comp.AIRE, 0) AS AIRE,
+  COALESCE(comp.FLORA, 0) AS FLORA,
+  COALESCE(comp.FAUNA, 0) AS FAUNA,
+  COALESCE(comp.AGUA, 0) AS AGUA,
+  COALESCE(comp.SUELO, 0) AS SUELO,
+  NULLIF(TRIM(h.TX_TIPOSUBSANACION), '') AS TIPO_SUBSANACION,
+  i.NU_PRESUNTINCUMPLIMIENTOS AS PRESUNTOS_INCUMPL,
+  hc.TOTAL_HECHOS AS TOTAL_HECHOS,
+  /* sin origen en tabla → marcador */
+  '--' AS ACTA_TRANSF,
+  '--' AS FECHA_ACTA_TRASNF,
+  '--' AS RPS,
+  '--' AS FECHA_RPS,
+  '--' AS RECOMENDACION_MEDIDAS_ADMIN,
+  COALESCE(i.TX_DOCMEDIDA, med.TX_DOCMA) AS RES_ACTA_MEDIDA,
+  COALESCE(i.FE_FECHAMEDIDA, med.FE_DOCMA) AS FECHA_MEDIDA,
+  CASE i.FG_ESTADO
+    WHEN 'A' THEN 'ACTIVO'
+    WHEN 'I' THEN 'INACTIVO'
+    ELSE i.FG_ESTADO
+  END AS ESTADO,
+  /* sin origen en tabla → marcador */
+  '--' AS ANALISTA_LEGAL,
+  '--' AS RESPONSABLE_COMISION,
+
+  /* —— EXTRAS OD —— */
+  CASE
+    WHEN ofi.TIPO_FUENTE = 'OD'
+      OR i.TX_NUMINFORME LIKE '%/ODES-%'
+      OR NULLIF(TRIM(i.TX_SECTOR_OD), '') IS NOT NULL
+    THEN COALESCE(ofi.TX_DESCRIPCION, i.TX_COORDINACION)
+    ELSE NULL
+  END AS OD,
+  /* sin origen en tabla → marcador */
+  '--' AS CATEG,
+  '--' AS COMPET,
+  NULLIF(TRIM(i.TX_SECTOR_OD), '') AS TIPO_OD,
+
+  /* —— QA —— */
+  CASE
+    WHEN i.TX_NUMINFORME IS NULL OR TRIM(i.TX_NUMINFORME) = '' THEN 1
+    ELSE 0
+  END AS FG_SIN_INFORME
+
+FROM T_MVC_INFORME_HEC i
+LEFT JOIN T_MVC_HECHOS_HEC h
+  ON h.NU_IDINFORME = i.NU_IDINFORME
+LEFT JOIN hec_ord ho
+  ON ho.NU_IDHECHOS = h.NU_IDHECHOS
+LEFT JOIN oficina ofi
+  ON ofi.PK_OFICINA = i.TX_COORDINACION
+LEFT JOIN mes
+  ON LOWER(mes.TX_MES) = LOWER(i.TX_MES)
+LEFT JOIN admuf af
+  ON af.NU_IDINFORME = i.NU_IDINFORME AND af.rn = 1
+LEFT JOIN doc_tipo dt
+  ON dt.NU_IDINFORME = i.NU_IDINFORME
+LEFT JOIN T_MVC_INFORMACIONMEDIDAS_MED med
+  ON med.NU_IDMEDIDAS = i.NU_IDMEDIDA
+LEFT JOIN comp
+  ON comp.NU_IDHECHO = h.NU_IDHECHOS
+LEFT JOIN hec_cnt hc
+  ON hc.NU_IDINFORME = i.NU_IDINFORME
+LEFT JOIN tiposup ts
+  ON ts.TX_CODIGO_CAT = i.TX_IDTIPOSUPERVISION
+ORDER BY i.NU_ANIO, i.NU_IDINFORME, h.NU_IDHECHOS;
+</sql>
+    <limit>0</limit>
+    <lookup/>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>N</variables_active>
+    <attributes/>
+    <GUI>
+      <xloc>128</xloc>
+      <yloc>160</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Table output FORM</name>
+    <type>TableOutput</type>
+    <description>DW_INF_CONSOL_FORM en oracle_dw (truncate; sin CREATE)</description>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <commit>1000</commit>
+    <connection>oracle_dw</connection>
+    <schema/>
+    <table>DW_INF_CONSOL_FORM</table>
+    <truncate>Y</truncate>
+    <ignore_errors>N</ignore_errors>
+    <use_batch>Y</use_batch>
+    <specify_fields>N</specify_fields>
+    <partitioning_enabled>N</partitioning_enabled>
+    <partitioning_daily>N</partitioning_daily>
+    <partitioning_monthly>Y</partitioning_monthly>
+    <tablename_in_field>N</tablename_in_field>
+    <tablename_in_table>Y</tablename_in_table>
+    <return_keys>N</return_keys>
+    <fields>
+    </fields>
+    <attributes/>
+    <GUI>
+      <xloc>368</xloc>
+      <yloc>160</yloc>
+    </GUI>
+  </transform>
+  <transform_error_handling>
+  </transform_error_handling>
+  <attributes/>
+</pipeline>

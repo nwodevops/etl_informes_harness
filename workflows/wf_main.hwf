@@ -2,12 +2,12 @@
 <workflow>
   <name>wf_main</name>
   <name_sync_with_filename>Y</name_sync_with_filename>
-  <description>Reset H2 → STG → RData → MySQL(soft) → Python (RDATA+FORM) → CSEP --load --soft → 3 tablas Oracle</description>
+  <description>Reset H2 → STG → RData → Python RDATA → pl_form → pl_csep → 3 tablas Oracle (hard-fail)</description>
   <extended_description/>
   <created_user>-</created_user>
   <modified_user>-</modified_user>
   <created_date>2026/08/05 10:00:00.000</created_date>
-  <modified_date>2026/09/22 10:00:00.000</modified_date>
+  <modified_date>2026/09/22 12:10:00.000</modified_date>
   <workflow_version/>
   <parameters/>
   <actions>
@@ -75,10 +75,10 @@ cd "${PROJECT_HOME}"
 cd "${PROJECT_HOME}"
 PY=python3
 [ -x .venv/bin/python ] &amp;&amp; PY=.venv/bin/python
-"$PY" python/create_stg.py
+"$PY" python/stg/create_stg.py
 </script>
       <name>Python create STG</name>
-      <description>inputs.yaml → CREATE TABLE STG_*</description>
+      <description>inputs.yaml → CREATE TABLE STG_INF_CONSOL</description>
       <type>SHELL</type>
       <attributes/>
       <xloc>336</xloc>
@@ -104,7 +104,7 @@ PY=python3
 cd "${PROJECT_HOME}"
 PY=python3
 [ -x .venv/bin/python ] &amp;&amp; PY=.venv/bin/python
-"$PY" python/stage_rdata.py
+"$PY" python/stage/stage_rdata.py
 </script>
       <name>Stage RData</name>
       <description>RData → STG_INF_CONSOL</description>
@@ -133,10 +133,10 @@ PY=python3
 cd "${PROJECT_HOME}"
 PY=python3
 [ -x .venv/bin/python ] &amp;&amp; PY=.venv/bin/python
-"$PY" python/stage_mysql.py --soft
+"$PY" python/main.py
 </script>
-      <name>Stage MySQL soft</name>
-      <description>MySQL → STG_INF_CONSOL_FORM (no falla el wf si MySQL cae)</description>
+      <name>Run Python</name>
+      <description>→ DW_INF_CONSOL_RDATA (truncate; tabla precreada)</description>
       <type>SHELL</type>
       <attributes/>
       <xloc>656</xloc>
@@ -145,61 +145,59 @@ PY=python3
       <attributes_hac/>
     </action>
     <action>
-      <filename/>
-      <work_directory>${PROJECT_HOME}</work_directory>
-      <arguments/>
-      <arg_from_previous>N</arg_from_previous>
-      <set_logfile>N</set_logfile>
-      <logfile/>
-      <logext/>
+      <name>pl_form_informes</name>
+      <description>MySQL → DW_INF_CONSOL_FORM (truncate; hard-fail)</description>
+      <type>PIPELINE</type>
+      <attributes/>
       <add_date>N</add_date>
       <add_time>N</add_time>
-      <loglevel>Basic</loglevel>
+      <clear_files>N</clear_files>
+      <clear_rows>N</clear_rows>
+      <create_parent_folder>N</create_parent_folder>
       <exec_per_row>N</exec_per_row>
+      <filename>${PROJECT_HOME}/pipelines/pl_form_informes.hpl</filename>
+      <logext/>
+      <logfile/>
+      <loglevel>Basic</loglevel>
+      <parameters>
+        <pass_all_parameters>Y</pass_all_parameters>
+      </parameters>
+      <params_from_previous>N</params_from_previous>
+      <run_configuration>local</run_configuration>
       <set_append_logfile>N</set_append_logfile>
-      <insertScript>Y</insertScript>
-      <script>set -e
-cd "${PROJECT_HOME}"
-PY=python3
-[ -x .venv/bin/python ] &amp;&amp; PY=.venv/bin/python
-"$PY" python/main.py
-</script>
-      <name>Run Python</name>
-      <description>→ DW_INF_CONSOL_RDATA + DW_INF_CONSOL_FORM (FORM siempre, aunque vacío)</description>
-      <type>SHELL</type>
-      <attributes/>
+      <set_logfile>N</set_logfile>
+      <wait_until_finished>Y</wait_until_finished>
+      <parallel>N</parallel>
       <xloc>816</xloc>
       <yloc>192</yloc>
-      <parallel>N</parallel>
       <attributes_hac/>
     </action>
     <action>
-      <filename/>
-      <work_directory>${PROJECT_HOME}</work_directory>
-      <arguments/>
-      <arg_from_previous>N</arg_from_previous>
-      <set_logfile>N</set_logfile>
-      <logfile/>
-      <logext/>
+      <name>pl_csep_informes</name>
+      <description>SISUD CSEP_INFORMES_VIEW → DW_INF_CSEP_INFORMES_VIEW (truncate; hard-fail)</description>
+      <type>PIPELINE</type>
+      <attributes/>
       <add_date>N</add_date>
       <add_time>N</add_time>
-      <loglevel>Basic</loglevel>
+      <clear_files>N</clear_files>
+      <clear_rows>N</clear_rows>
+      <create_parent_folder>N</create_parent_folder>
       <exec_per_row>N</exec_per_row>
+      <filename>${PROJECT_HOME}/pipelines/pl_csep_informes.hpl</filename>
+      <logext/>
+      <logfile/>
+      <loglevel>Basic</loglevel>
+      <parameters>
+        <pass_all_parameters>Y</pass_all_parameters>
+      </parameters>
+      <params_from_previous>N</params_from_previous>
+      <run_configuration>local</run_configuration>
       <set_append_logfile>N</set_append_logfile>
-      <insertScript>Y</insertScript>
-      <script>set -e
-cd "${PROJECT_HOME}"
-PY=python3
-[ -x .venv/bin/python ] &amp;&amp; PY=.venv/bin/python
-"$PY" python/ddl_csep_informes.py --load --soft
-</script>
-      <name>CSEP load soft</name>
-      <description>DROP+CREATE+load DW_INF_CSEP_INFORMES_VIEW (stub vacío si SISUD cae; sin Hop pipeline)</description>
-      <type>SHELL</type>
-      <attributes/>
+      <set_logfile>N</set_logfile>
+      <wait_until_finished>Y</wait_until_finished>
+      <parallel>N</parallel>
       <xloc>976</xloc>
       <yloc>192</yloc>
-      <parallel>N</parallel>
       <attributes_hac/>
     </action>
     <action>
@@ -237,13 +235,6 @@ PY=python3
     </hop>
     <hop>
       <from>Stage RData</from>
-      <to>Stage MySQL soft</to>
-      <evaluation>Y</evaluation>
-      <unconditional>N</unconditional>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Stage MySQL soft</from>
       <to>Run Python</to>
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>
@@ -251,13 +242,20 @@ PY=python3
     </hop>
     <hop>
       <from>Run Python</from>
-      <to>CSEP load soft</to>
+      <to>pl_form_informes</to>
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>CSEP load soft</from>
+      <from>pl_form_informes</from>
+      <to>pl_csep_informes</to>
+      <evaluation>Y</evaluation>
+      <unconditional>N</unconditional>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>pl_csep_informes</from>
       <to>Success</to>
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>
@@ -266,7 +264,7 @@ PY=python3
   </hops>
   <notepads>
     <notepad>
-      <note>Destino final: DW_INF_CONSOL_RDATA + DW_INF_CONSOL_FORM + DW_INF_CSEP_INFORMES_VIEW. MySQL/SISUD soft via Python (no depende de pl_csep si SISUD cae).</note>
+      <note>3 tablas: DW_INF_CONSOL_RDATA (Python), DW_INF_CONSOL_FORM + DW_INF_CSEP_INFORMES_VIEW (Hop truncate). DDL Oracle: sql/dw/ una vez. MySQL/SISUD hard-fail.</note>
       <markdown>N</markdown>
       <notetype>GENERAL</notetype>
       <fontname>Segoe UI</fontname>

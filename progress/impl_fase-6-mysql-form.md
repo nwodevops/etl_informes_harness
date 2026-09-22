@@ -1,16 +1,16 @@
-# impl_fase-6-mysql-form
+# impl_fase-6-mysql-form (actualizado 2026-09-22)
 
 ## Qué
 
-Cablear SQL HEC (`vw_inf_consol_simil.sql`) como segunda fuente: MySQL → `STG_INF_CONSOL_FORM` → `APP.DW_INF_CONSOL_FORM`, en paralelo a RData → `DW_INF_CONSOL_RDATA`.
+MySQL HEC → `APP.DW_INF_CONSOL_FORM` vía **Hop** (`pl_form_informes.hpl`), truncate, hard-fail.
 
-## Cambios
+## Piezas
 
-- `inputs.yaml` type `mysql` + `python/introspect/mysql.py` + handler en `create_stg.py`
-- `python/stage_mysql.py` + `pymysql` + `DB_MYSQL_*`
-- `leer_h2` clave `INF_FORM`; logica `RESULTADO_FORM` passthrough; `escribir_oracle(table=...)`; `main` escribe ambas
-- `init.sh` corre stage_mysql y grepea `DW_INF_CONSOL_FORM`
+- `metadata/rdbms/mysql.json` (`DB_MYSQL_*`)
+- `pipelines/pl_form_informes.hpl` (SQL embebido desde `input/input_mysql/vw_inf_consol_simil.sql`)
+- DDL una vez: `sql/dw/02_dw_inf_consol_form.sql`
+- Cableado en `wf_main` / `init.sh` (hop-run)
 
-## Verificación
+## Nota
 
-`./init.sh` → `HARNESS OK`
+Ya no hay `stage_mysql.py` ni STG_INF_CONSOL_FORM en H2.

@@ -1,10 +1,10 @@
 ---
 name: hop-python-etl
 description: >-
-  Arquetipo Apache Hop + H2 in-memory STG_* + Python post-staging.
-  inputs.yaml, create_stg.py, wf_create_stg/wf_main, logica/ aislada,
-  project-config.json. Usar al clonar el cascarón, añadir fuentes STG,
-  cablear workflows o depurar Hop/H2/Python.
+  Arquetipo Apache Hop primero + H2 STG_* + Python post-staging.
+  Preferir Hop 1:1; wf_create_stg (diseño DDL STG) vs wf_main (corrida).
+  inputs.yaml, create_stg.py, logica/ aislada, project-config.json.
+  Usar al clonar el cascarón, añadir fuentes STG, cablear workflows o depurar Hop/H2/Python.
 ---
 
 # Hop + H2 + Python ETL
@@ -24,33 +24,50 @@ Fuentes (Excel / Sheets / Oracle / lo que declare inputs.yaml)
 | Capa | Hace | No hace |
 |---|---|---|
 | `inputs.yaml` | Manifiesto de fuentes | Extraer filas |
-| `python/create_stg.py` | Introspect + `CREATE TABLE STG_*` | Negocio |
+| `python/stg/create_stg.py` | Introspect + `CREATE TABLE STG_*` | Negocio |
 | Hop | Extract → H2 | UNION multi-fuente ni KPIs |
 | `logica/` | Negocio en memoria | Conexiones ni drivers |
 | `python/io/` | Leer H2, escribir destino | Reglas de negocio |
 
 **Contrato:** `python/CONTRATO.md`. **Staging:** [reference.md](reference.md).
 
-## Cuándo Hop solo vs Python
+## Preferir Apache Hop
 
-- **Hop solo:** 1 fuente → 1 destino, mapeo 1:1.
-- **Python:** homologación, calidad, joins, dimensional, indicadores.
-
-Un solo `.py` en `logica/` (auto-descubierto por `python/main.py`). Entrada = claves de `LECTURAS` en `python/io/leer_h2.py`. Salida = DataFrame `RESULTADO`.
+**Regla de oro:** intentar siempre Hop (pipeline TableInput → TableOutput) antes de escribir extract/load en Python. Python queda para post-staging (`logica/`) u homologación que Hop no cubre bien (p.ej. RData + mapa de columnas).
 
 ## Workflows
 
+| Workflow | Rol |
+|---|---|
+| **Diseño** [`wf_create_stg.hwf`](../../../workflows/wf_create_stg.hwf) | Crear / validar tablas `STG_*` en H2. Deja H2 vivo (9092) para mapear pipelines. **No** es la corrida diaria. |
+| **Corrida** [`wf_main.hwf`](../../../workflows/wf_main.hwf) | Se ejecuta **siempre** en producción/smoke. Usa el contrato STG ya definido (`inputs.yaml` + create_stg). Orquesta stage + `logica` + destinos Hop/Python. |
+
+Oracle destino: CREATE una vez (`sql/dw/`); corrida = TRUNCATE. H2 mem se resetea en cada `wf_main`, por eso recreate STG va en la corrida.
+
+## Cuándo Hop solo vs Python
+
+- **Hop (preferido):** 1 fuente → 1 destino, mapeo 1:1 (ej. FORM MySQL→Oracle, CSEP vista→tabla).
+- **Python:** homologación RData, calidad, joins, KPIs en `logica/`.
+
+Un solo `.py` en `logica/` (auto-descubierto por `python/main.py`). Entrada = claves de `LECTURAS` en `python/io/leer_h2.py`. Salida = DataFrame `RESULTADO`.
+
+## Workflows (detalle arquetipo)
+
 **Diseño** (`wf_create_stg.hwf`): Reset H2 → Python create STG → Success (H2 vivo en 9092 para mapear pipelines).
 
-**Corrida** (`wf_main.hwf`): Reset H2 → create STG → `pl_stage_*` / `pl_demo` → Run Python → Success.
+**Corrida** (`wf_main.hwf`): Reset H2 → create STG → stage RData → Run Python (RDATA) → `pl_form` → `pl_csep` → Success.
 
-Smoke sin Hop:
+Smoke sin Hop GUI (requiere hop-run + tablas sql/dw/):
 
 ```bash
 ./h2/scripts/reset_and_create.sh
-.venv/bin/python python/create_stg.py
+.venv/bin/python python/stg/create_stg.py
+.venv/bin/python python/stage/stage_rdata.py
 .venv/bin/python python/main.py
+# hop-run pl_form + pl_csep (o ./init.sh)
 ```
+
+Layout: `python/{core,stg,stage,rdata,introspect,io}/` + `pipelines/pl_form_informes.hpl` + `pl_csep_informes.hpl` — ver `python/LEEME.md` y `sql/dw/`.
 
 ## Extender una fuente (checklist)
 

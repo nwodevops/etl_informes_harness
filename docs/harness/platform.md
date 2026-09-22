@@ -8,18 +8,24 @@ Divulgación progresiva desde [`AGENTS.md`](../../AGENTS.md).
 - Java en PATH (H2).
 - Python: `.venv/` + `python/requirements.txt`.
 
+## Preferir Apache Hop
+
+Intentar siempre cargas 1:1 con pipelines Hop. Python solo para post-staging / casos que Hop no resuelve limpio.
+
 ## Workflows
 
 | Workflow | Uso |
 |---|---|
-| `workflows/wf_create_stg.hwf` | Diseño: Reset H2 → Python STG → H2 vivo en 9092 |
-| `workflows/wf_main.hwf` | Corrida: Reset → STG → `pl_demo` → Python |
+| `workflows/wf_create_stg.hwf` | **Diseño:** crea tablas `STG_*` en H2; deja H2 vivo en 9092 para mapear. No es la corrida habitual. |
+| `workflows/wf_main.hwf` | **Corrida habitual:** se ejecuta siempre; STG ya definido por create_stg/`inputs.yaml`; stage + lógica + FORM/CSEP Hop. |
 
-Smoke sin Hop:
+DDL Oracle DW una vez: [`sql/dw/`](../../sql/dw/). En corrida solo TRUNCATE.
+
+Smoke (requiere hop-run + `sql/dw/` precreado):
 
 ```bash
 ./switch-env.sh local
-./h2/scripts/reset_and_create.sh && .venv/bin/python python/create_stg.py && .venv/bin/python python/main.py
+./init.sh
 ```
 
 ## Capa de lógica

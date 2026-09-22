@@ -77,7 +77,7 @@ cd "${PROJECT_HOME}"
 cd "${PROJECT_HOME}"
 PY=python3
 [ -x .venv/bin/python ] &amp;&amp; PY=.venv/bin/python
-"$PY" python/create_stg.py
+"$PY" python/stg/create_stg.py
 </script>
       <loglevel>Basic</loglevel>
       <parallel>N</parallel>

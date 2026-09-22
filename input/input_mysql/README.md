@@ -1,16 +1,18 @@
 # MySQL (gappsdb) — sistema informes HEC
 
-Fuente paralela a RData. Extract en Python (`stage_mysql.py`), no Hop TableInput.
+Fuente paralela a RData. Carga canónica vía **Hop** (`pl_form_informes.hpl`), no Python.
 
 | Archivo | Contenido |
 |---|---|
-| [`vw_inf_consol_simil.sql`](vw_inf_consol_simil.sql) | SELECT 83 cols (grano = hecho; `FUENTE` BD\|OD) |
+| [`vw_inf_consol_simil.sql`](vw_inf_consol_simil.sql) | SELECT 83 cols (grano = hecho; `FUENTE` BD\|OD) — embebido en el pipeline |
 | [`mapa_mysql_vs_rdata.md`](mapa_mysql_vs_rdata.md) | ER, OD/SEDE, mapeo y huecos |
 
 ## Pipeline
 
-`inputs.yaml` (`type: mysql`) → `create_stg.py` → `STG_INF_CONSOL_FORM` → `logica` (`RESULTADO_FORM` passthrough) → `APP.DW_INF_CONSOL_FORM`.
+`metadata/rdbms/mysql.json` + `pipelines/pl_form_informes.hpl` → TRUNCATE `APP.DW_INF_CONSOL_FORM`.
 
-Variables: `DB_MYSQL_*` en `environments/*.json` (vía `project-config.json`).
+Prerrequisito: CREATE tabla una vez ([`sql/dw/02_dw_inf_consol_form.sql`](../../sql/dw/02_dw_inf_consol_form.sql)).
 
-Credenciales: `docs/credenciales/` (no versionado). No guardar passwords aquí.
+Variables: `DB_MYSQL_*` en `environments/*.json` (vía `project-config.json`). Hard-fail si MySQL cae.
+
+Credenciales: `docs/credenciales/` (no versionado).

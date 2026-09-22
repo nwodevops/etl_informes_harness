@@ -1,8 +1,8 @@
-# Lógica post-STG — informes RData + FORM (MySQL HEC).
-# Capa: logica/ (sin conexiones). Entradas INF_RDATA / INF_FORM; salidas RESULTADO*.
+# Lógica post-STG — informes RData.
+# Capa: logica/ (sin conexiones). Entrada INF_RDATA; salidas RESULTADO / QA_*.
 #
 # RData: mapa canónico ya aplicado en stage_rdata.py; aquí QA suave.
-# FORM: passthrough puro (SQL MySQL ya trae canónico + FG_SIN_INFORME).
+# FORM y CSEP no pasan por aqui (Hop: pl_form_informes / pl_csep_informes).
 
 RESULTADO = INF_RDATA.copy()
 
@@ -21,15 +21,3 @@ QA_RESUMEN = (
     )
     .reset_index()
 )
-
-# FORM: sin re-mapear ni mezclar con RData
-RESULTADO_FORM = INF_FORM.copy()
-
-if len(RESULTADO_FORM):
-    QA_RESUMEN_FORM = (
-        RESULTADO_FORM.groupby(["FUENTE", "ANIO"], dropna=False)
-        .agg(N=("INFORME", "size"))
-        .reset_index()
-    )
-else:
-    QA_RESUMEN_FORM = pd.DataFrame(columns=["FUENTE", "ANIO", "N"])

@@ -11,7 +11,7 @@ flowchart TB
   end
 
   YAML["inputs.yaml"]
-  PYDDL["python/create_stg.py"]
+  PYDDL["python/stg/create_stg.py"]
   HOP["Apache Hop pl_stage_*"]
   H2["H2 mem:csep STG_* + DEMO"]
   PY["python/main.py + logica/"]
@@ -26,17 +26,22 @@ flowchart TB
 | Capa | Responsabilidad |
 |---|---|
 | `inputs.yaml` | Declara fuentes → tablas `STG_*` |
-| `create_stg.py` | DDL H2 (sin filas) |
-| Hop | Extract → H2 |
-| `logica/` | Reglas de negocio (un `.py`) |
-| H2 | Staging efímero (reset cada corrida) |
+| `create_stg.py` | DDL H2 (sin filas) — `python/stg/` |
+| `stage_rdata.py` | RData → H2 — `python/stage/` |
+| `main.py` + `logica/` | Reglas post-STG → `DW_INF_CONSOL_RDATA` (TRUNCATE) |
+| `pl_form_informes.hpl` | MySQL → `DW_INF_CONSOL_FORM` (TRUNCATE) |
+| `pl_csep_informes.hpl` | SISUD vista → `DW_INF_CSEP_INFORMES_VIEW` (TRUNCATE) |
+| `sql/dw/` | CREATE Oracle una vez (manual) |
+| Hop | FORM/CSEP + orquestación `wf_main` |
+| `logica/` | Reglas de negocio RData (un `.py`) |
+| H2 | Staging RData efímero (reset cada corrida) |
 
 ## Workflows
 
 | Workflow | Uso |
 |---|---|
 | `wf_create_stg.hwf` | Diseño: deja H2 vivo para mapear pipelines |
-| `wf_main.hwf` | Corrida demo: Reset → STG → pl_demo → Python |
+| `wf_main.hwf` | Corrida: Reset → STG → RData → Python RDATA → pl_form → pl_csep |
 
 ## Extender
 

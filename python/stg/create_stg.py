@@ -9,7 +9,7 @@ Flujo:
 
 
 Uso (H2 ya levantado tras Reset):
-  .venv/bin/python python/create_stg.py
+  .venv/bin/python python/stg/create_stg.py
 
 sources: [] -> no-op exit 0 (smoke test del arquetipo).
 """
@@ -20,11 +20,11 @@ import argparse
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-if str(HERE) not in sys.path:
-    sys.path.insert(0, str(HERE))
+_PY = Path(__file__).resolve().parents[1]
+if str(_PY) not in sys.path:
+    sys.path.insert(0, str(_PY))
 
-from config import load_sources, load_vars, project_root, require_live_conn  # noqa: E402
+from core.config import load_sources, load_vars, project_root, require_live_conn  # noqa: E402
 from introspect import excel, mysql, oracle, rdata, sheets  # noqa: E402
 from introspect.h2_ddl import apply_h2, create_table_sql, write_script  # noqa: E402
 

@@ -1,22 +1,16 @@
-# impl_fase-7-hop-csep-informes
+# impl_fase-7-hop-csep-informes (actualizado 2026-09-22)
 
 ## Qué
 
-Copia 1:1 vista `CSEP_INFORMES_VIEW` (oracle_sisud) → tabla `DW_INF_CSEP_INFORMES_VIEW` (oracle_dw) vía Hop.
+Vista `CSEP_INFORMES_VIEW` (oracle_sisud) → `DW_INF_CSEP_INFORMES_VIEW` (oracle_dw) vía Hop truncate, hard-fail.
 
 ## Piezas
 
-- `environments/local.json`: `DB_ORA_SISUD_*` (localhost:1523/XEPDB1)
-- `environments/remote.json`: placeholders; descripciones apuntan a CSEPDV / REPOCSEP (`docs/credenciales/remote.txt`)
-- `python/ddl_csep_informes.py`: DROP+CREATE tabla `DW_INF_CSEP_INFORMES_VIEW` (Hop TableOutput no crea tablas)
-- `pipelines/pl_csep_informes.hpl`: TableInput → TableOutput truncate
-- `workflows/wf_csep_informes.hwf`: Shell DDL → Pipeline → Success
+- `pipelines/pl_csep_informes.hpl`
+- `workflows/wf_csep_informes*.hwf` (solo pipeline)
+- Cableado en `wf_main` / `init.sh` (hop-run)
+- DDL una vez: `sql/dw/03_dw_inf_csep_informes_view.sql` (preferir CTAS desde la vista)
 
-## Corrida
+## Nota
 
-```bash
-./switch-env.sh local
-# Hop GUI → wf_csep_informes.hwf
-```
-
-No forma parte de `./init.sh`.
+Eliminado `python/csep/ddl_csep_informes.py` (DROP+CREATE + soft).

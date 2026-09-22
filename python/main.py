@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""ENTRY POINT capa lógica post-staging (informes RData + FORM).
+"""ENTRY POINT capa lógica post-staging (informes RData).
 
   1. SETUP   : project-config.json
   2. ENTRADA : io/leer_h2.py -> DataFrames (LECTURAS)
   3. LOGICA  : único .py en logica/
-  4. SALIDA  : siempre APP.DW_INF_CONSOL_RDATA + APP.DW_INF_CONSOL_FORM
-               (FORM se crea aunque esté vacío / MySQL caído)
+  4. SALIDA  : APP.DW_INF_CONSOL_RDATA (TRUNCATE; tabla precreada)
+
+FORM y CSEP van por Hop (pl_form_informes / pl_csep_informes), no por aquí.
 
 Contrato: python/CONTRATO.md
 """
@@ -20,13 +21,10 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
-from config import load_vars, project_root  # noqa: E402
-from rdata.schema import CANONICAL_NAMES  # noqa: E402
+from core.config import load_vars, project_root  # noqa: E402
 
 SALIDA_DF = "RESULTADO"
-SALIDA_FORM = "RESULTADO_FORM"
 TABLE_RDATA = "DW_INF_CONSOL_RDATA"
-TABLE_FORM = "DW_INF_CONSOL_FORM"
 
 
 def _load(name: str, path: Path):
@@ -39,7 +37,7 @@ def _load(name: str, path: Path):
 
 
 def _es_salida(nombre: str) -> bool:
-    if nombre in (SALIDA_DF, SALIDA_FORM):
+    if nombre == SALIDA_DF:
         return True
     return nombre.startswith(("INT_", "QA_", "PROF_", "DF_"))
 
@@ -84,33 +82,13 @@ def main() -> int:
     escribir_ora = _load("escribir_oracle", HERE / "io" / "escribir_oracle.py")
     escribir_ora.escribir_oracle(salidas[SALIDA_DF], root, table=TABLE_RDATA)
 
-    # FORM: siempre DROP+CREATE en destino (aunque 0 filas o sin INF_FORM)
-    form_df = salidas.get(SALIDA_FORM)
-    if form_df is None or list(form_df.columns) == []:
-        form_df = pd.DataFrame(columns=CANONICAL_NAMES)
-        print(
-            f"AVISO: {SALIDA_FORM} ausente/sin columnas; "
-            f"se crea {TABLE_FORM} vacía (canónico)",
-            flush=True,
-        )
-    elif len(form_df) == 0:
-        print(
-            f"AVISO: {SALIDA_FORM} vacío; se crea {TABLE_FORM} con 0 filas",
-            flush=True,
-        )
-    escribir_ora.escribir_oracle(form_df, root, table=TABLE_FORM)
-
     try:
         escribir = _load("escribir_excel", HERE / "io" / "escribir_excel.py")
         escribir.escribir_excel(salidas[SALIDA_DF], root)
     except Exception as exc:
         print(f"AVISO: Excel no escrito ({exc})", flush=True)
 
-    print(
-        "Listo (H2 -> logica -> Oracle "
-        f"{TABLE_RDATA} + {TABLE_FORM}).",
-        flush=True,
-    )
+    print(f"Listo (H2 -> logica -> Oracle {TABLE_RDATA}).", flush=True)
     return 0
 
 

@@ -47,3 +47,12 @@ Al cerrar una feature, append aquí: fecha, id, resumen, evidencia (`progress/im
 - Hop: vista `CSEP_INFORMES_VIEW` → tabla `DW_INF_CSEP_INFORMES_VIEW` (`wf_main` + `ddl_csep_informes.py`)
 - Evidencia: `progress/impl_fase-7-hop-csep-informes.md`
 - Independiente de `init.sh` / `wf_main`
+
+---
+
+## 2026-09-22 — hop-canonico-form-csep
+
+- FORM/CSEP canónicos en Hop (`pl_form_informes`, `pl_csep_informes`); hard-fail; TRUNCATE
+- Eliminado Python `stage_mysql` / `csep/`; `escribir_oracle` solo TRUNCATE; DDL en `sql/dw/`
+- `init.sh`/`init.bat`: hop-run pl_form + pl_csep tras RData
+- Evidencia: plan Hop FORM CSEP
