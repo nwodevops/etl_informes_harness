@@ -38,6 +38,16 @@ ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md
 `inputs.yaml` → `create_stg.py` → `stage_rdata.py` / `stage_mysql.py` → `main.py` / `logica/` → `APP.DW_INF_CONSOL_RDATA` + `APP.DW_INF_CONSOL_FORM`.  
 Mapa: [`docs/rdata_column_map.md`](docs/rdata_column_map.md). SQL HEC: [`input/input_mysql/`](input/input_mysql/).
 
+## Flujo CSEP informes (Hop, paralelo)
+
+`CSEP_INFORMES_VIEW` (oracle_sisud) → [`python/ddl_csep_informes.py`](python/ddl_csep_informes.py) + [`pipelines/pl_csep_informes.hpl`](pipelines/pl_csep_informes.hpl) → `CSEP_INFORMES` (oracle_dw).  
+Workflow: [`workflows/wf_csep_informes.hwf`](workflows/wf_csep_informes.hwf). **No** entra en `./init.sh` / `wf_main`.
+
+```bash
+./switch-env.sh local   # o remote (completar DB_ORA_SISUD_* + DB_ORA_DW_* desde docs/credenciales/)
+# Hop GUI → wf_csep_informes   |   hop-run -f workflows/wf_csep_informes.hwf ...
+```
+
 ## Nuevo proyecto
 
 Este repo es un cascarón. Fuentes → `inputs.yaml`. Lecturas → `python/io/leer_h2.py`. Transformación → `logica/<tu>.py`. Destino DW → `escribir_oracle.py`.

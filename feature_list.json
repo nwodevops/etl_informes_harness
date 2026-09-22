@@ -47,6 +47,13 @@
       "status": "done",
       "criterio": "STG_INF_CONSOL_FORM + DW_INF_CONSOL_FORM; RData sigue en DW_INF_CONSOL_RDATA; init.sh HARNESS OK",
       "doc": "input/input_mysql/README.md"
+    },
+    {
+      "id": "fase-7-hop-csep-informes",
+      "title": "Hop CSEP_INFORMES_VIEW → CSEP_INFORMES",
+      "status": "done",
+      "criterio": "wf_csep_informes: DDL + pl_csep_informes; tabla en oracle_dw; independiente de init.sh",
+      "doc": "workflows/wf_csep_informes.hwf"
     }
   ]
 }

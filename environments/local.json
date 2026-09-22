@@ -32,33 +32,33 @@
     },
     {
       "name": "DB_ORA_SISUD_URL",
-      "value": "jdbc:oracle:thin:@//<HOST>:<PUERTO>/<SERVICE>",
-      "description": "Oracle fuente — completar"
+      "value": "jdbc:oracle:thin:@//localhost:1523/XEPDB1",
+      "description": "Oracle fuente SISUD (CSEP_INFORMES_VIEW)"
     },
     {
       "name": "DB_ORA_SISUD_HOST",
-      "value": "<HOST>",
+      "value": "localhost",
       "description": "Host Oracle fuente"
     },
     {
       "name": "DB_ORA_SISUD_PORT",
-      "value": "<PUERTO>",
+      "value": "1523",
       "description": "Puerto Oracle fuente"
     },
     {
       "name": "DB_ORA_SISUD_DATABASE",
-      "value": "<SERVICE>",
+      "value": "XEPDB1",
       "description": "Service Oracle fuente"
     },
     {
       "name": "DB_ORA_SISUD_USERNAME",
-      "value": "<USUARIO>",
+      "value": "SISUD",
       "description": "Usuario Oracle fuente"
     },
     {
       "name": "DB_ORA_SISUD_PASSWORD",
-      "value": "<PASSWORD>",
-      "description": "Password Oracle fuente"
+      "value": "sisud2026",
+      "description": "Password Oracle fuente (local demo)"
     },
     {
       "name": "DB_ORA_REPO_URL",

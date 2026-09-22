@@ -33,27 +33,27 @@
     {
       "name": "DB_ORA_SISUD_URL",
       "value": "jdbc:oracle:thin:@//<HOST>:<PUERTO>/<SERVICE>",
-      "description": "Oracle fuente REMOTO"
+      "description": "Oracle fuente REMOTO (CSEPDV @ odaprod-scan:1534/oefabd — ver docs/credenciales/remote.txt)"
     },
     {
       "name": "DB_ORA_SISUD_HOST",
       "value": "<HOST>",
-      "description": "Host Oracle fuente"
+      "description": "Host Oracle fuente (odaprod-scan)"
     },
     {
       "name": "DB_ORA_SISUD_PORT",
       "value": "<PUERTO>",
-      "description": "Puerto Oracle fuente"
+      "description": "Puerto Oracle fuente (1534)"
     },
     {
       "name": "DB_ORA_SISUD_DATABASE",
       "value": "<SERVICE>",
-      "description": "Service Oracle fuente"
+      "description": "Service Oracle fuente (oefabd)"
     },
     {
       "name": "DB_ORA_SISUD_USERNAME",
       "value": "<USUARIO>",
-      "description": "Usuario Oracle fuente"
+      "description": "Usuario Oracle fuente (CSEPDV)"
     },
     {
       "name": "DB_ORA_SISUD_PASSWORD",
@@ -93,27 +93,27 @@
     {
       "name": "DB_ORA_DW_URL",
       "value": "jdbc:oracle:thin:@//<HOST>:<PUERTO>/<SERVICE>",
-      "description": "Oracle DW REMOTO"
+      "description": "Oracle DW REMOTO (REPOCSEP @ 10.6.0.15:1532/dvoefacore — ver docs/credenciales/remote.txt)"
     },
     {
       "name": "DB_ORA_DW_HOST",
       "value": "<HOST>",
-      "description": "Host Oracle DW"
+      "description": "Host Oracle DW (10.6.0.15)"
     },
     {
       "name": "DB_ORA_DW_PORT",
       "value": "<PUERTO>",
-      "description": "Puerto Oracle DW"
+      "description": "Puerto Oracle DW (1532)"
     },
     {
       "name": "DB_ORA_DW_DATABASE",
       "value": "<SERVICE>",
-      "description": "Service Oracle DW"
+      "description": "Service Oracle DW (dvoefacore)"
     },
     {
       "name": "DB_ORA_DW_USERNAME",
       "value": "<USUARIO>",
-      "description": "Usuario Oracle DW"
+      "description": "Usuario Oracle DW (REPOCSEP)"
     },
     {
       "name": "DB_ORA_DW_PASSWORD",
