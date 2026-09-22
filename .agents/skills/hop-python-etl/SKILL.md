@@ -39,10 +39,8 @@ Fuentes (Excel / Sheets / Oracle / lo que declare inputs.yaml)
 
 | Workflow | Rol |
 |---|---|
-| **Diseño** [`wf_create_stg.hwf`](../../../workflows/wf_create_stg.hwf) | Crear / validar tablas `STG_*` en H2. Deja H2 vivo (9092) para mapear pipelines. **No** es la corrida diaria. |
-| **Corrida** [`wf_main.hwf`](../../../workflows/wf_main.hwf) | Se ejecuta **siempre** en producción/smoke. Usa el contrato STG ya definido (`inputs.yaml` + create_stg). Orquesta stage + `logica` + destinos Hop/Python. |
-
-Oracle destino: CREATE una vez (`sql/dw/`); corrida = TRUNCATE. H2 mem se resetea en cada `wf_main`, por eso recreate STG va en la corrida.
+| **Diseño** [`wf_create_stg.hwf`](../../../workflows/wf_create_stg.hwf) | Crear `STG_*` en H2 **y** asegurar `DW_INF_*` en oracle_dw (`ensure_dw_tables.py`). **No** es la corrida diaria. |
+| **Corrida** [`wf_main.hwf`](../../../workflows/wf_main.hwf) | Se ejecuta **siempre** en producción/smoke. TRUNCATE + carga; DW ya deben existir. |
 
 ## Cuándo Hop solo vs Python
 

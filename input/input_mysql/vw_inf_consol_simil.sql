@@ -1,7 +1,7 @@
 -- Simil APP.DW_INF_CONSOL_RDATA desde gappsdb (sistema informes HEC)
 -- Grano: 1 fila por HECHO (T_MVC_HECHOS_HEC), denormalizado con informe + admin/UF.
 -- Actualizado 2026-09-21: FUENTE BD|OD, docs tipados, oficina.
--- Solo columnas SIN origen en tabla: CHAR/DATE → '--' ; NUMBER → -1
+-- Solo columnas SIN origen en tabla: CHAR → '--' ; DATE → NULL ; NUMBER → -1
 --
 -- Detalle ER / huecos: mapa_mysql_vs_rdata.md
 
@@ -201,8 +201,8 @@ SELECT
     AS TX_DOCUMENTO_PREVIO,
   dt.DOC_PREVIO AS TX_NUMERO_DOCUMENTO_PREVIO,
   dt.FECHA_DOC_PREVIO AS FE_DOCUMENTO_PREVIO,
-  /* sin origen en tabla → marcador */
-  '--' AS FE_REGISTRO_DOCUMENTO_PREVIO,
+  /* sin origen en tabla → marcador (DATE = NULL para Oracle) */
+  CAST(NULL AS DATETIME) AS FE_REGISTRO_DOCUMENTO_PREVIO,
   '--' AS TX_OTRO_DOCUMENTO_PREVIO,
   i.FE_FECHADERIVACION AS FE_DERIV_DOC_DERIVACION,
 
@@ -236,11 +236,11 @@ SELECT
   NULLIF(TRIM(h.TX_TIPOSUBSANACION), '') AS TIPO_SUBSANACION,
   i.NU_PRESUNTINCUMPLIMIENTOS AS PRESUNTOS_INCUMPL,
   hc.TOTAL_HECHOS AS TOTAL_HECHOS,
-  /* sin origen en tabla → marcador */
+  /* sin origen en tabla → marcador (DATE = NULL) */
   '--' AS ACTA_TRANSF,
-  '--' AS FECHA_ACTA_TRASNF,
+  CAST(NULL AS DATETIME) AS FECHA_ACTA_TRASNF,
   '--' AS RPS,
-  '--' AS FECHA_RPS,
+  CAST(NULL AS DATETIME) AS FECHA_RPS,
   '--' AS RECOMENDACION_MEDIDAS_ADMIN,
   COALESCE(i.TX_DOCMEDIDA, med.TX_DOCMA) AS RES_ACTA_MEDIDA,
   COALESCE(i.FE_FECHAMEDIDA, med.FE_DOCMA) AS FECHA_MEDIDA,

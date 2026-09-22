@@ -8,7 +8,7 @@ FORM y CSEP son pipelines Hop (no Python).
 | Carpeta | Contenido |
 |---|---|
 | `core/` | `config.py`, `h2_conn.py`, bootstrap de `sys.path` |
-| `stg/` | `create_stg.py` — DDL `STG_INF_CONSOL` desde `inputs.yaml` |
+| `stg/` | `create_stg.py` (H2 STG), `ensure_dw_tables.py` (Oracle DW CREATE si faltan) |
 | `stage/` | `stage_rdata.py` — RData → H2 |
 | `rdata/` | Contrato columnas + mapa EQUIV |
 | `introspect/` | Deduce columnas (oracle, mysql, rdata, …) |

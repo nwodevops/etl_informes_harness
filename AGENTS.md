@@ -24,7 +24,7 @@ ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md
 
 ```bash
 ./switch-env.sh local
-# Una vez: sql/dw/*.sql en oracle_dw (APP)
+# Primera vez / DW vacío: Hop → wf_create_stg.hwf  (o: .venv/bin/python python/stg/ensure_dw_tables.py)
 ./init.sh
 ~/apps/hop/hop-gui.sh   # → wf_main.hwf
 ```
@@ -58,10 +58,10 @@ Requiere Java, jar H2, `.venv` (`pyyaml pandas jaydebeapi`), **Rscript**, **hop-
 
 | Workflow | Rol |
 |---|---|
-| [`workflows/wf_create_stg.hwf`](workflows/wf_create_stg.hwf) | **Diseño / DDL STG:** crea las tablas `STG_*` en H2 (deja H2 vivo para mapear pipelines). No es la corrida de producción. |
-| [`workflows/wf_main.hwf`](workflows/wf_main.hwf) (Windows: `wf_main_windows`) | **Corrida habitual:** se ejecuta siempre; asume el contrato STG ya definido vía `wf_create_stg` / `inputs.yaml`. Orquesta stage + lógica + destinos. |
+| [`workflows/wf_create_stg.hwf`](workflows/wf_create_stg.hwf) / [`wf_create_stg_windows.hwf`](workflows/wf_create_stg_windows.hwf) | **Diseño / DDL:** crea `STG_*` en H2 **y** asegura `DW_INF_*` en oracle_dw (CREATE si faltan, sin DROP). Primera vez o cuando falten tablas. |
+| [`workflows/wf_main.hwf`](workflows/wf_main.hwf) / [`wf_main_windows.hwf`](workflows/wf_main_windows.hwf) | **Corrida habitual:** DW ya creadas; TRUNCATE + carga. |
 
-Oracle DW (`DW_INF_*`): CREATE **una vez** en [`sql/dw/`](sql/dw/); en corrida solo TRUNCATE+INSERT (Hop o Python). H2 es in-memory: en cada `wf_main` se recrea el DDL STG porque el mem se pierde al reset.
+Oracle DW: también documentado en [`sql/dw/`](sql/dw/); lo habitual es dejarlo a `wf_create_stg` → `python/stg/ensure_dw_tables.py`. H2 es in-memory: cada `wf_main` recreate STG porque el mem se pierde al reset.
 
 ## Reglas críticas
 
@@ -70,7 +70,7 @@ Oracle DW (`DW_INF_*`): CREATE **una vez** en [`sql/dw/`](sql/dw/); en corrida s
 3. **Sin `${VAR}` literal** en logs Hop = variable mal definida.
 4. `logica/` no abre conexiones. I/O en `python/io/`. Homologación RData en `python/rdata/` + `python/stage/stage_rdata.py`.
 5. `python/io/leer_h2.py` y sus pares se cargan por ruta en `main.py`; **no** hacer `import io` (choca con stdlib).
-6. Destino Oracle: **TRUNCATE** (no DROP). DDL una vez en `sql/dw/`.
+6. Destino Oracle: **TRUNCATE** en corrida (no DROP). CREATE si faltan → `wf_create_stg` / `python/stg/ensure_dw_tables.py` (ref. [`sql/dw/`](sql/dw/)).
 7. Cargas 1:1 (FORM, CSEP, etc.) → **pipelines Hop**, no scripts Python de extract/load.
 
 ## Flujo informes (RData + FORM + CSEP)
@@ -84,10 +84,12 @@ hop-run pipelines/pl_csep_informes.hpl → DW_INF_CSEP_INFORMES_VIEW
 
 Mapa RData: [`docs/rdata_column_map.md`](docs/rdata_column_map.md). SQL HEC: [`input/input_mysql/`](input/input_mysql/). Layout: [`python/LEEME.md`](python/LEEME.md).
 
-| OS | Harness | Workflow Hop |
+| OS | Primera vez (DDL) | Corrida habitual |
 |---|---|---|
-| Linux | [`init.sh`](init.sh) | [`workflows/wf_main.hwf`](workflows/wf_main.hwf) |
-| Windows | [`init.bat`](init.bat) | [`workflows/wf_main_windows.hwf`](workflows/wf_main_windows.hwf) |
+| Linux | [`wf_create_stg.hwf`](workflows/wf_create_stg.hwf) | [`wf_main.hwf`](workflows/wf_main.hwf) |
+| Windows | [`wf_create_stg_windows.hwf`](workflows/wf_create_stg_windows.hwf) | [`wf_main_windows.hwf`](workflows/wf_main_windows.hwf) |
+
+Misma lógica en ambos OS; solo cambian shells `.sh` vs `.bat`.
 
 CSEP standalone: [`wf_csep_informes*.hwf`](workflows/wf_csep_informes.hwf) (solo pipeline).
 

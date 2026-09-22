@@ -16,10 +16,8 @@ Intentar siempre cargas 1:1 con pipelines Hop. Python solo para post-staging / c
 
 | Workflow | Uso |
 |---|---|
-| `workflows/wf_create_stg.hwf` | **Diseño:** crea tablas `STG_*` en H2; deja H2 vivo en 9092 para mapear. No es la corrida habitual. |
-| `workflows/wf_main.hwf` | **Corrida habitual:** se ejecuta siempre; STG ya definido por create_stg/`inputs.yaml`; stage + lógica + FORM/CSEP Hop. |
-
-DDL Oracle DW una vez: [`sql/dw/`](../../sql/dw/). En corrida solo TRUNCATE.
+| `workflows/wf_create_stg.hwf` | **Diseño:** `STG_*` en H2 + `ensure_dw_tables` (CREATE `DW_INF_*` si faltan). |
+| `workflows/wf_main.hwf` | **Corrida habitual:** TRUNCATE + carga; DW ya creadas. |
 
 Smoke (requiere hop-run + `sql/dw/` precreado):
 
