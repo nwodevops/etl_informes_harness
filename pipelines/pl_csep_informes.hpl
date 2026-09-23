@@ -51,7 +51,7 @@
   <transform>
     <name>Table input view</name>
     <type>TableInput</type>
-    <description>SELECT * FROM CSEP_INFORMES_VIEW</description>
+    <description>SELECT * FROM SISUD.CSEP_INFORMES_VIEW (CSEPDV sin synonym)</description>
     <distribute>Y</distribute>
     <custom_distribution/>
     <copies>1</copies>
@@ -60,7 +60,7 @@
       <schema_name/>
     </partitioning>
     <connection>oracle_sisud</connection>
-    <sql>SELECT * FROM CSEP_INFORMES_VIEW</sql>
+    <sql>SELECT * FROM SISUD.CSEP_INFORMES_VIEW</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>

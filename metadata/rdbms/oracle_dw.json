@@ -22,7 +22,7 @@
         "PRESERVE_RESERVED_WORD_CASE": "Y",
         "SQL_CONNECT": "",
         "FORCE_IDENTIFIERS_TO_UPPERCASE": "N",
-        "PREFERRED_SCHEMA_NAME": "APP"
+        "PREFERRED_SCHEMA_NAME": ""
       },
       "manualUrl": "${DB_ORA_DW_URL}",
       "sshTunnelPassphrase": "Encrypted ",
