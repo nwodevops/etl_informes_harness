@@ -28,9 +28,9 @@ flowchart TB
 | `inputs.yaml` | Declara fuentes → tablas `STG_*` |
 | `create_stg.py` | DDL H2 (sin filas) — `python/stg/` |
 | `stage_rdata.py` | RData → H2 — `python/stage/` |
-| `main.py` + `logica/` | Reglas post-STG → `DW_INF_CONSOL_RDATA` (TRUNCATE) |
-| `pl_form_informes.hpl` | MySQL → `DW_INF_CONSOL_FORM` (TRUNCATE) |
-| `pl_csep_informes.hpl` | SISUD vista → `DW_INF_CSEP_INFORMES_VIEW` (TRUNCATE) |
+| `main.py` + `logica/` | RData post-STG → `DW_INF_CONSOL_RDATA` (vía `wf_create_stg`, no diario) |
+| `pl_form_informes.hpl` | MySQL → `DW_INF_CONSOL_FORM` (diario) |
+| `pl_csep_informes.hpl` | SISUD vista → `DW_INF_CSEP_INFORMES_VIEW` (diario) |
 | `sql/dw/` | CREATE Oracle una vez (manual) |
 | Hop | FORM/CSEP + orquestación `wf_main` |
 | `logica/` | Reglas de negocio RData (un `.py`) |

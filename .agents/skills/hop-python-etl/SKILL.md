@@ -39,8 +39,8 @@ Fuentes (Excel / Sheets / Oracle / lo que declare inputs.yaml)
 
 | Workflow | Rol |
 |---|---|
-| **Diseño** [`wf_create_stg.hwf`](../../../workflows/wf_create_stg.hwf) | Crear `STG_*` en H2 **y** asegurar `DW_INF_*` en oracle_dw (`ensure_dw_tables.py`). **No** es la corrida diaria. |
-| **Corrida** [`wf_main.hwf`](../../../workflows/wf_main.hwf) | Se ejecuta **siempre** en producción/smoke. TRUNCATE + carga; DW ya deben existir. |
+| **Diseño / RData** [`wf_create_stg.hwf`](../../../workflows/wf_create_stg.hwf) | DDL + carga backup RData → `DW_INF_CONSOL_RDATA` (bajo demanda; no diario). |
+| **Corrida diaria** [`wf_main.hwf`](../../../workflows/wf_main.hwf) | Solo `pl_form` + `pl_csep`. |
 
 ## Cuándo Hop solo vs Python
 
@@ -51,9 +51,9 @@ Un solo `.py` en `logica/` (auto-descubierto por `python/main.py`). Entrada = cl
 
 ## Workflows (detalle arquetipo)
 
-**Diseño** (`wf_create_stg.hwf`): Reset H2 → Python create STG → Success (H2 vivo en 9092 para mapear pipelines).
+**Diseño / RData** (`wf_create_stg.hwf`): Reset H2 → create STG → ensure DW → stage RData → Python RDATA.
 
-**Corrida** (`wf_main.hwf`): Reset H2 → create STG → stage RData → Run Python (RDATA) → `pl_form` → `pl_csep` → Success.
+**Diario** (`wf_main.hwf`): `pl_form` → `pl_csep` → Success.
 
 Smoke sin Hop GUI (requiere hop-run + tablas sql/dw/):
 

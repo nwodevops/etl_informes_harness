@@ -8,6 +8,25 @@ Divulgación progresiva desde [`AGENTS.md`](../../AGENTS.md).
 - Java en PATH (H2).
 - Python: `.venv/` + `python/requirements.txt`.
 
+## Orden de ejecución
+
+### Primera vez / cuando cambien los `.RData`
+
+Play `wf_create_stg` / `wf_create_stg_windows`:
+
+1. Reset H2  
+2. CREATE `STG_*`  
+3. CREATE `DW_INF_*` si faltan  
+4. Stage RData → H2  
+5. Python → `DW_INF_CONSOL_RDATA`
+
+### Todos los días
+
+Play `wf_main` / `wf_main_windows` (o `./init.sh` / `init.bat`):
+
+1. Hop FORM → `DW_INF_CONSOL_FORM`  
+2. Hop CSEP → `DW_INF_CSEP_INFORMES_VIEW`
+
 ## Preferir Apache Hop
 
 Intentar siempre cargas 1:1 con pipelines Hop. Python solo para post-staging / casos que Hop no resuelve limpio.
@@ -16,10 +35,10 @@ Intentar siempre cargas 1:1 con pipelines Hop. Python solo para post-staging / c
 
 | Workflow | Uso |
 |---|---|
-| `workflows/wf_create_stg.hwf` | **Diseño:** `STG_*` en H2 + `ensure_dw_tables` (CREATE `DW_INF_*` si faltan). |
-| `workflows/wf_main.hwf` | **Corrida habitual:** TRUNCATE + carga; DW ya creadas. |
+| `workflows/wf_create_stg.hwf` | **Bajo demanda:** DDL + RData → `DW_INF_CONSOL_RDATA`. |
+| `workflows/wf_main.hwf` | **Diario:** FORM + CSEP solamente. |
 
-Smoke (requiere hop-run + `sql/dw/` precreado):
+Smoke diario:
 
 ```bash
 ./switch-env.sh local

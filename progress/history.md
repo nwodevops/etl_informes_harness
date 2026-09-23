@@ -56,3 +56,8 @@ Al cerrar una feature, append aquí: fecha, id, resumen, evidencia (`progress/im
 - Eliminado Python `stage_mysql` / `csep/`; `escribir_oracle` solo TRUNCATE; DDL en `sql/dw/`
 - `init.sh`/`init.bat`: hop-run pl_form + pl_csep tras RData
 - Evidencia: plan Hop FORM CSEP
+
+## 2026-09-22 — rdata bajo demanda
+
+- RData (backup) solo en `wf_create_stg*`; `wf_main*` / `init` diario = FORM + CSEP Hop
+- DATE MySQL: NULL en vez de `--` para pl_form (ORA-01858)
