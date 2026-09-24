@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Asegura tablas DW en oracle_dw (CREATE si no existen; nunca DROP).
+"""Asegura tablas DW en oracle_dw y mysql_dw (CREATE si no existen; nunca DROP).
 
 Lo llama wf_create_stg (diseño) antes de mapear / de la primera corrida.
 Runtime (wf_main) solo TRUNCATE+INSERT.
@@ -7,6 +7,8 @@ Runtime (wf_main) solo TRUNCATE+INSERT.
   DW_INF_CONSOL_RDATA — DDL canónico
   DW_INF_CONSOL_FORM — canónico + FECHA_CARGA (CREATE o ALTER ADD)
   DW_INF_CSEP_INFORMES_VIEW — columnas de CSEP_INFORMES_VIEW (oracle_sisud)
+
+Destinos: oracle_dw (Oracle) + mysql_dw (MySQL mirror; ≠ fuente HEC mysql).
 """
 
 from __future__ import annotations
@@ -22,6 +24,9 @@ if str(_PY) not in sys.path:
 from core.config import load_vars, project_root, require_live_conn  # noqa: E402
 from rdata.schema import (  # noqa: E402
     FECHA_CARGA_COMMENT,
+    mysql_ddl,
+    mysql_ddl_form,
+    mysql_type_from_oracle_meta,
     oracle_comment_statements,
     oracle_comment_statements_form,
     oracle_ddl,
@@ -58,10 +63,54 @@ def _connect(connection: str, variables: dict[str, str]):
     return conn, cv
 
 
+def _connect_mysql(variables: dict[str, str]):
+    try:
+        import pymysql
+    except ImportError as exc:
+        raise SystemExit(
+            "Falta pymysql. Instala: pip install -r python/requirements.txt"
+        ) from exc
+    cv = require_live_conn("mysql_dw", variables)
+    port = int(cv["port"]) if str(cv["port"]).isdigit() else 3306
+    conn = pymysql.connect(
+        host=cv["host"],
+        port=port,
+        user=cv["username"],
+        password=cv["password"],
+        database=cv["database"],
+        charset="utf8mb4",
+        autocommit=False,
+    )
+    return conn, cv
+
+
 def _table_exists(cur, table: str) -> bool:
     cur.execute(
         "SELECT COUNT(*) FROM user_tables WHERE table_name = :1",
         [table.upper()],
+    )
+    return int(cur.fetchone()[0]) > 0
+
+
+def _mysql_table_exists(cur, table: str) -> bool:
+    cur.execute(
+        """
+        SELECT COUNT(*) FROM information_schema.tables
+        WHERE table_schema = DATABASE() AND table_name = %s
+        """,
+        (table,),
+    )
+    return int(cur.fetchone()[0]) > 0
+
+
+def _mysql_column_exists(cur, table: str, column: str) -> bool:
+    cur.execute(
+        """
+        SELECT COUNT(*) FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = %s AND column_name = %s
+        """,
+        (table, column),
     )
     return int(cur.fetchone()[0]) > 0
 
@@ -204,6 +253,31 @@ def _build_csep_ddl(cols: list[tuple], table: str, ts: str) -> str:
     return f"CREATE TABLE {table} (\n{body}\n) TABLESPACE {ts}"
 
 
+def _build_csep_mysql_ddl(cols: list[tuple], table: str) -> str:
+    parts: list[str] = []
+    for (
+        _owner,
+        name,
+        data_type,
+        data_length,
+        data_precision,
+        data_scale,
+        char_length,
+        nullable,
+        _cid,
+    ) in cols:
+        typ = mysql_type_from_oracle_meta(
+            str(data_type), data_length, data_precision, data_scale, char_length
+        )
+        null_sql = "" if (nullable or "Y") == "Y" else " NOT NULL"
+        parts.append(f"  `{name}` {typ}{null_sql}")
+    body = ",\n".join(parts)
+    return (
+        f"CREATE TABLE IF NOT EXISTS `{table}` (\n{body}\n) "
+        f"ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+    )
+
+
 def _ensure_csep(variables: dict[str, str]) -> str:
     dst, dst_cv = _connect("oracle_dw", variables)
     try:
@@ -233,9 +307,86 @@ def _ensure_csep(variables: dict[str, str]) -> str:
         dst.close()
 
 
+def _fetch_csep_cols(variables: dict[str, str]) -> list[tuple]:
+    src, _cv = _connect("oracle_sisud", variables)
+    try:
+        scur = src.cursor()
+        cols = _fetch_view_columns(scur, SRC_VIEW)
+        scur.close()
+        return cols
+    finally:
+        src.close()
+
+
+def _ensure_mysql_rdata(cur) -> str:
+    if _mysql_table_exists(cur, TABLE_RDATA):
+        return "exists"
+    cur.execute(mysql_ddl(TABLE_RDATA))
+    return "created"
+
+
+def _ensure_mysql_form(cur) -> str:
+    if not _mysql_table_exists(cur, TABLE_FORM):
+        cur.execute(mysql_ddl_form(TABLE_FORM))
+        return "created"
+    if not _mysql_column_exists(cur, TABLE_FORM, "FECHA_CARGA"):
+        cmt = FECHA_CARGA_COMMENT.replace("\\", "\\\\").replace("'", "''")
+        cur.execute(
+            f"ALTER TABLE `{TABLE_FORM}` ADD COLUMN `FECHA_CARGA` DATETIME NULL "
+            f"COMMENT '{cmt}'"
+        )
+        return "altered"
+    return "exists"
+
+
+def _ensure_mysql_csep(cur, variables: dict[str, str]) -> str:
+    if _mysql_table_exists(cur, TABLE_CSEP):
+        return "exists"
+    cols = _fetch_csep_cols(variables)
+    cur.execute(_build_csep_mysql_ddl(cols, TABLE_CSEP))
+    return f"created:{len(cols)}"
+
+
+def _ensure_mysql_all(variables: dict[str, str]) -> None:
+    conn, cv = _connect_mysql(variables)
+    try:
+        cur = conn.cursor()
+        for label, status in (
+            (TABLE_RDATA, _ensure_mysql_rdata(cur)),
+            (TABLE_FORM, _ensure_mysql_form(cur)),
+        ):
+            if status == "created":
+                conn.commit()
+                print(
+                    f"MySQL DW: CREATE {label} "
+                    f"@ {cv['host']}:{cv['port']}/{cv['database']}",
+                    flush=True,
+                )
+            elif status == "altered":
+                conn.commit()
+                print(f"MySQL DW: ALTER {label} ADD FECHA_CARGA", flush=True)
+            else:
+                print(f"MySQL DW: {label} ya existe (ok)", flush=True)
+
+        status = _ensure_mysql_csep(cur, variables)
+        if status.startswith("created"):
+            conn.commit()
+            n = status.split(":", 1)[1]
+            print(
+                f"MySQL DW: CREATE {TABLE_CSEP} ({n} cols) "
+                f"@ {cv['host']}:{cv['port']}/{cv['database']}",
+                flush=True,
+            )
+        else:
+            print(f"MySQL DW: {TABLE_CSEP} ya existe (ok)", flush=True)
+        cur.close()
+    finally:
+        conn.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="CREATE tablas DW en oracle_dw si no existen (sin DROP)"
+        description="CREATE tablas DW en oracle_dw y mysql_dw si no existen (sin DROP)"
     )
     parser.add_argument("--root", default=None)
     args = parser.parse_args(argv)
@@ -294,7 +445,17 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    print("DW: tablas destino listas (CREATE solo si faltaban).", flush=True)
+    try:
+        _ensure_mysql_all(variables)
+    except Exception as exc:
+        print(
+            f"ERROR: no se pudo asegurar tablas MySQL DW ({exc}). "
+            f"Revisa mysql_dw / DB_MYSQL_DW_* o sql/dw/mysql/",
+            file=sys.stderr,
+        )
+        return 1
+
+    print("DW: tablas destino listas (Oracle + MySQL; CREATE solo si faltaban).", flush=True)
     return 0
 
 

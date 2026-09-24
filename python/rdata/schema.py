@@ -307,3 +307,69 @@ def oracle_comment_statements_form(schema: str, table: str) -> list[str]:
         f"{_sql_quote(FECHA_CARGA_COMMENT)}"
     )
     return stmts
+
+
+def _mysql_col_type(name: str, ora: str) -> str:
+    """Oracle canonical type → MySQL DDL fragment.
+
+    Usa TEXT/LONGTEXT para strings (utf8mb4 supera 65535 con muchos VARCHAR).
+    """
+    if ora == "CLOB" or name == "HECHO_VERIF":
+        return "LONGTEXT"
+    if ora == "DATE":
+        return "DATETIME"
+    if ora == "NUMBER":
+        return "DOUBLE"
+    return "TEXT"
+
+
+def mysql_ddl(table: str) -> str:
+    """CREATE TABLE MySQL canónico (RDATA / base FORM)."""
+    lines = [f"  `{name}` {_mysql_col_type(name, ora)}" for name, _h2, ora in CANONICAL]
+    body = ",\n".join(lines)
+    return (
+        f"CREATE TABLE IF NOT EXISTS `{table}` (\n{body}\n) "
+        f"ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+    )
+
+
+def mysql_ddl_form(table: str) -> str:
+    """CREATE FORM MySQL = canónico + FECHA_CARGA."""
+    ddl = mysql_ddl(table).rstrip()
+    suffix = ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+    if not ddl.endswith(suffix):
+        raise ValueError("mysql_ddl: formato inesperado")
+    core = ddl[: -len(suffix)]
+    return core + ",\n  `FECHA_CARGA` DATETIME\n" + suffix
+
+
+def mysql_type_from_oracle_meta(
+    data_type: str,
+    data_length,
+    data_precision,
+    data_scale,
+    char_length,
+) -> str:
+    """Map ALL_TAB_COLUMNS Oracle types → MySQL for CSEP mirror."""
+    dt = (data_type or "").upper()
+    if dt in ("VARCHAR2", "NVARCHAR2", "CHAR", "NCHAR"):
+        # TEXT evita row-size 65535 con utf8mb4 en muchas columnas
+        return "TEXT"
+    if dt == "NUMBER":
+        if data_precision is None:
+            return "DOUBLE"
+        p = int(data_precision)
+        if data_scale is None or int(data_scale) == 0:
+            if p <= 18:
+                return "BIGINT"
+            return "DOUBLE"
+        return "DOUBLE"
+    if dt in ("FLOAT", "BINARY_FLOAT", "BINARY_DOUBLE"):
+        return "DOUBLE"
+    if dt == "DATE" or dt.startswith("TIMESTAMP"):
+        return "DATETIME"
+    if dt in ("CLOB", "NCLOB", "LONG"):
+        return "LONGTEXT"
+    if dt == "BLOB":
+        return "LONGBLOB"
+    return "TEXT"

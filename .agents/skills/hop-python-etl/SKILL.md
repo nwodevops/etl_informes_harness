@@ -44,8 +44,8 @@ Fuentes (Excel / Sheets / Oracle / lo que declare inputs.yaml)
 
 ## Cuándo Hop solo vs Python
 
-- **Hop (preferido):** 1 fuente → 1 destino, mapeo 1:1 (ej. FORM MySQL→Oracle, CSEP vista→tabla).
-- **Python:** homologación RData, calidad, joins, KPIs en `logica/`.
+- **Hop (preferido):** 1 fuente → destinos 1:1 o copy dual (ej. FORM HEC→Oracle+MySQL DW, CSEP vista→Oracle+MySQL DW).
+- **Python:** homologación RData, calidad, joins, KPIs en `logica/`; RDATA también escribe `mysql_dw`.
 
 Un solo `.py` en `logica/` (auto-descubierto por `python/main.py`). Entrada = claves de `LECTURAS` en `python/io/leer_h2.py`. Salida = DataFrame `RESULTADO`.
 
@@ -81,7 +81,9 @@ Layout: `python/{core,stg,stage,rdata,introspect,io}/` + `pipelines/pl_form_info
 Fuente única: `project-config.json` → `config.variables`. Entorno: `./switch-env.sh local|remote`.
 
 - `DB_H2_*` — staging TCP `localhost:9092/mem:csep`
-- `DB_ORA_*` — placeholders hasta que haya Oracle
+- `DB_ORA_DW_*` / `DB_ORA_SISUD_*` — Oracle destino / fuente CSEP
+- `DB_MYSQL_*` — fuente HEC gappsdb
+- `DB_MYSQL_DW_*` — destino mirror DW (misma BD tipicamente; **conexión distinta**)
 
 `${VAR}` literal en log = variable no definida o proyecto Hop equivocado.
 

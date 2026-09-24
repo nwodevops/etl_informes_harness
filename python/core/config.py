@@ -25,6 +25,7 @@ CONNECTION_PREFIX = {
     "oracle_dw": "DB_ORA_DW",            # destino DW (APP / REPOCSEP)
     "h2": "DB_H2",                       # staging in-memory
     "mysql": "DB_MYSQL",                 # fuente HEC gappsdb
+    "mysql_dw": "DB_MYSQL_DW",           # destino DW mirror (gappsdb; ≠ fuente HEC)
 }
 
 

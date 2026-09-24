@@ -1,5 +1,6 @@
 # Sesión activa
 
-Feature `fase-5-union-vigente-2026` **done**.
+**Feature:** `fase-8-mysql-dw-mirror` (done)
+**Rama:** `feature/mysql-dw-mirror`
 
-`APP.DW_INF_CONSOL_RDATA`: **83** cols, **111091** filas.
+Dual-write verificado local: FORM 19 + CSEP 53288 en `mysql_dw`. RDATA tabla vacía hasta play `wf_create_stg`.

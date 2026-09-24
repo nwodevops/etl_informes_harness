@@ -51,12 +51,12 @@ ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md
 
 `init.sh` / `init.bat` → **HARNESS OK** diario:
 
-1. `DW_INF_CONSOL_FORM` — Hop `pl_form_informes`
-2. `DW_INF_CSEP_INFORMES_VIEW` — Hop `pl_csep_informes`
+1. `DW_INF_CONSOL_FORM` — Hop `pl_form_informes` → **oracle_dw + mysql_dw**
+2. `DW_INF_CSEP_INFORMES_VIEW` — Hop `pl_csep_informes` → **oracle_dw + mysql_dw**
 
-`DW_INF_CONSOL_RDATA` se refresca solo con `wf_create_stg*` (input_rdata es backup; no diario).
+`DW_INF_CONSOL_RDATA` se refresca solo con `wf_create_stg*` (Oracle + MySQL vía `main.py`).
 
-Requiere **hop-run**, Oracle DW, MySQL y SISUD vivos. RData/H2/Rscript solo para `wf_create_stg*`.
+Requiere **hop-run**, Oracle DW, **MySQL HEC** (`mysql`), **MySQL DW** (`mysql_dw`) y SISUD vivos. RData/H2/Rscript solo para `wf_create_stg*`.
 
 ## Reglas críticas
 
@@ -65,8 +65,8 @@ Requiere **hop-run**, Oracle DW, MySQL y SISUD vivos. RData/H2/Rscript solo para
 3. **Sin `${VAR}` literal** en logs Hop.
 4. `logica/` no abre conexiones. Homologación RData en `python/rdata/` + `stage_rdata.py`.
 5. No `import io` (stdlib).
-6. Destino Oracle: **TRUNCATE** en carga; CREATE si faltan → `ensure_dw_tables` en `wf_create_stg*`.
-7. FORM/CSEP → pipelines Hop.
+6. Destinos **oracle_dw** y **mysql_dw**: **TRUNCATE** en carga; CREATE si faltan → `ensure_dw_tables` en `wf_create_stg*`.
+7. FORM/CSEP → pipelines Hop (copy a ambos destinos). Fuente HEC ≠ `mysql_dw`.
 
 ## Orden de ejecución
 
@@ -76,16 +76,16 @@ Play **`wf_create_stg.hwf`** (Linux) o **`wf_create_stg_windows.hwf`** (Windows)
 
 1. Reset H2  
 2. CREATE `STG_*`  
-3. CREATE `DW_INF_*` si faltan  
+3. CREATE `DW_INF_*` si faltan (**Oracle + MySQL DW**)  
 4. Stage RData → H2  
-5. Python → `DW_INF_CONSOL_RDATA`
+5. Python → `DW_INF_CONSOL_RDATA` (**oracle_dw + mysql_dw**)
 
 ### Todos los días
 
 Play **`wf_main.hwf`** / **`wf_main_windows.hwf`** (o `./init.sh` / `init.bat`):
 
-1. Hop FORM → `DW_INF_CONSOL_FORM`  
-2. Hop CSEP → `DW_INF_CSEP_INFORMES_VIEW`
+1. Hop FORM → `DW_INF_CONSOL_FORM` (Oracle + MySQL DW)  
+2. Hop CSEP → `DW_INF_CSEP_INFORMES_VIEW` (Oracle + MySQL DW)
 
 | OS | Bajo demanda | Diario |
 |---|---|---|

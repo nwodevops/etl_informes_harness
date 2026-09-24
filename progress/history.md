@@ -61,3 +61,9 @@ Al cerrar una feature, append aquí: fecha, id, resumen, evidencia (`progress/im
 
 - RData (backup) solo en `wf_create_stg*`; `wf_main*` / `init` diario = FORM + CSEP Hop
 - DATE MySQL: NULL en vez de `--` para pl_form (ORA-01858)
+
+## 2026-09-24 — fase-8-mysql-dw-mirror
+
+- Dual-write `DW_INF_*` a `oracle_dw` + `mysql_dw` (`DB_MYSQL_DW_*`; ≠ fuente HEC)
+- Hop copy FORM/CSEP; RDATA `escribir_mysql` vía `main.py`; ensure CREATE MySQL
+- Evidencia: `progress/impl_fase-8-mysql-dw-mirror.md`; init HARNESS OK (FORM 19 + CSEP 53288 en MySQL)

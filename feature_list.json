@@ -54,6 +54,13 @@
       "status": "done",
       "criterio": "wf_main + init hop-run pl_csep_informes; TRUNCATE; hard-fail SISUD; sql/dw CREATE una vez",
       "doc": "pipelines/pl_csep_informes.hpl"
+    },
+    {
+      "id": "fase-8-mysql-dw-mirror",
+      "title": "Dual-write DW_INF_* → MySQL (mysql_dw)",
+      "status": "done",
+      "criterio": "3 tablas en oracle_dw y mysql_dw; FORM/CSEP Hop copy; RDATA main.py escribir_mysql; ensure CREATE MySQL",
+      "doc": "progress/impl_fase-8-mysql-dw-mirror.md"
     }
   ]
 }

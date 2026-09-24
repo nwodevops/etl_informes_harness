@@ -149,6 +149,36 @@
       "name": "DB_MYSQL_PASSWORD",
       "value": "<PASSWORD>",
       "description": "Password MySQL HEC"
+    },
+    {
+      "name": "DB_MYSQL_DW_URL",
+      "value": "jdbc:mysql://<HOST>:<PUERTO>/<DATABASE>",
+      "description": "JDBC URL MySQL DW mirror (gappsdb)"
+    },
+    {
+      "name": "DB_MYSQL_DW_HOST",
+      "value": "<HOST>",
+      "description": "Host MySQL DW"
+    },
+    {
+      "name": "DB_MYSQL_DW_PORT",
+      "value": "<PUERTO>",
+      "description": "Puerto MySQL DW"
+    },
+    {
+      "name": "DB_MYSQL_DW_DATABASE",
+      "value": "<DATABASE>",
+      "description": "Base MySQL DW"
+    },
+    {
+      "name": "DB_MYSQL_DW_USERNAME",
+      "value": "<USUARIO>",
+      "description": "Usuario MySQL DW"
+    },
+    {
+      "name": "DB_MYSQL_DW_PASSWORD",
+      "value": "<PASSWORD>",
+      "description": "Password MySQL DW"
     }
   ]
 }

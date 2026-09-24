@@ -4,7 +4,7 @@
   1. SETUP   : project-config.json
   2. ENTRADA : io/leer_h2.py -> DataFrames (LECTURAS)
   3. LOGICA  : único .py en logica/
-  4. SALIDA  : APP.DW_INF_CONSOL_RDATA (TRUNCATE; tabla precreada)
+  4. SALIDA  : DW_INF_CONSOL_RDATA en oracle_dw + mysql_dw (TRUNCATE)
 
 FORM y CSEP van por Hop (pl_form_informes / pl_csep_informes), no por aquí.
 
@@ -82,13 +82,19 @@ def main() -> int:
     escribir_ora = _load("escribir_oracle", HERE / "io" / "escribir_oracle.py")
     escribir_ora.escribir_oracle(salidas[SALIDA_DF], root, table=TABLE_RDATA)
 
+    escribir_my = _load("escribir_mysql", HERE / "io" / "escribir_mysql.py")
+    escribir_my.escribir_mysql(salidas[SALIDA_DF], root, table=TABLE_RDATA)
+
     try:
         escribir = _load("escribir_excel", HERE / "io" / "escribir_excel.py")
         escribir.escribir_excel(salidas[SALIDA_DF], root)
     except Exception as exc:
         print(f"AVISO: Excel no escrito ({exc})", flush=True)
 
-    print(f"Listo (H2 -> logica -> Oracle {TABLE_RDATA}).", flush=True)
+    print(
+        f"Listo (H2 -> logica -> Oracle+MySQL {TABLE_RDATA}).",
+        flush=True,
+    )
     return 0
 
 
