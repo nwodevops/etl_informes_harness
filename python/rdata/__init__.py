@@ -22,9 +22,12 @@ from rdata.schema import (  # noqa: F401
     EXTRAS_EQUIV,
     EXTRAS_OD,
     EXTRAS_QA,
+    FECHA_CARGA_COMMENT,
     NUMBER_COLS,
     PROVENANCE,
     TABLE_COMMENT,
     oracle_comment_statements,
+    oracle_comment_statements_form,
     oracle_ddl,
+    oracle_ddl_form,
 )

@@ -1,6 +1,6 @@
 -- Crear una vez en oracle_dw (usuario APP). No ejecutar en cada corrida.
--- Runtime: TRUNCATE + INSERT (Python RData / Hop FORM).
--- Generado desde python/rdata/schema.py
+-- Runtime: Hop pl_form_informes (TRUNCATE + INSERT). Incluye FECHA_CARGA.
+-- Preferible: python/stg/ensure_dw_tables.py (CREATE o ALTER ADD FECHA_CARGA).
 
 CREATE TABLE APP.DW_INF_CONSOL_FORM (
   FUENTE VARCHAR2(500),
@@ -86,6 +86,8 @@ CREATE TABLE APP.DW_INF_CONSOL_FORM (
   COMPET VARCHAR2(500),
   TIPO_OD VARCHAR2(500),
   FG_SIN_INFORME NUMBER
+,
+  FECHA_CARGA DATE
 );
 
 COMMENT ON TABLE APP.DW_INF_CONSOL_FORM IS 'Informes consolidados BD+OD (RData 2019–2026). Estructura anclada a esquema vigente 2025/2026; histórico vía EQUIV/NULL. ETL: Hop+H2+Python → full refresh.'
@@ -172,3 +174,4 @@ COMMENT ON COLUMN APP.DW_INF_CONSOL_FORM.CATEG IS '[OD] Categoría.'
 COMMENT ON COLUMN APP.DW_INF_CONSOL_FORM.COMPET IS '[OD] Competencia.'
 COMMENT ON COLUMN APP.DW_INF_CONSOL_FORM.TIPO_OD IS '[OD] Tipo OD (fuente TIPO; no confundir con TIPO_INF).'
 COMMENT ON COLUMN APP.DW_INF_CONSOL_FORM.FG_SIN_INFORME IS 'QA ETL (logica/): 1 si INFORME vacío/nulo; 0 en caso contrario.'
+COMMENT ON COLUMN APP.DW_INF_CONSOL_FORM.FECHA_CARGA IS 'Instante de carga ETL hacia DW_INF_CONSOL_FORM (Hop pl_form_informes).'

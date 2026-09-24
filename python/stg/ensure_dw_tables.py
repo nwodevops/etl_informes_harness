@@ -4,7 +4,8 @@
 Lo llama wf_create_stg (diseño) antes de mapear / de la primera corrida.
 Runtime (wf_main) solo TRUNCATE+INSERT.
 
-  DW_INF_CONSOL_RDATA / DW_INF_CONSOL_FORM — DDL desde rdata.schema
+  DW_INF_CONSOL_RDATA — DDL canónico
+  DW_INF_CONSOL_FORM — canónico + FECHA_CARGA (CREATE o ALTER ADD)
   DW_INF_CSEP_INFORMES_VIEW — columnas de CSEP_INFORMES_VIEW (oracle_sisud)
 """
 
@@ -19,7 +20,13 @@ if str(_PY) not in sys.path:
     sys.path.insert(0, str(_PY))
 
 from core.config import load_vars, project_root, require_live_conn  # noqa: E402
-from rdata.schema import oracle_comment_statements, oracle_ddl  # noqa: E402
+from rdata.schema import (  # noqa: E402
+    FECHA_CARGA_COMMENT,
+    oracle_comment_statements,
+    oracle_comment_statements_form,
+    oracle_ddl,
+    oracle_ddl_form,
+)
 
 ESQUEMA = "APP"
 TABLE_RDATA = "DW_INF_CONSOL_RDATA"
@@ -79,6 +86,36 @@ def _ensure_canonical(cur, schema: str, table: str, ts: str) -> str:
     for stmt in oracle_comment_statements(schema, table):
         cur.execute(stmt)
     return "created"
+
+
+def _column_exists(cur, table: str, column: str) -> bool:
+    cur.execute(
+        """
+        SELECT COUNT(*) FROM user_tab_columns
+        WHERE table_name = :1 AND column_name = :2
+        """,
+        [table.upper(), column.upper()],
+    )
+    return int(cur.fetchone()[0]) > 0
+
+
+def _ensure_form(cur, schema: str, ts: str) -> str:
+    """CREATE FORM con FECHA_CARGA, o ALTER ADD si la tabla ya existía sin la col."""
+    table = TABLE_FORM
+    if not _table_exists(cur, table):
+        ddl = oracle_ddl_form(schema, table).rstrip() + f" TABLESPACE {ts}"
+        cur.execute(ddl)
+        for stmt in oracle_comment_statements_form(schema, table):
+            cur.execute(stmt)
+        return "created"
+    if not _column_exists(cur, table, "FECHA_CARGA"):
+        cur.execute(f"ALTER TABLE {schema}.{table} ADD FECHA_CARGA DATE")
+        cur.execute(
+            f"COMMENT ON COLUMN {schema}.{table}.FECHA_CARGA IS "
+            f"'{FECHA_CARGA_COMMENT.replace(chr(39), chr(39)+chr(39))}'"
+        )
+        return "altered"
+    return "exists"
 
 
 def _ora_col_type(
@@ -214,17 +251,33 @@ def main(argv: list[str] | None = None) -> int:
         if schema.upper() != ESQUEMA:
             print(f"DW: esquema sesión = {schema} (esperado {ESQUEMA})", flush=True)
         ts = _user_tablespace(cur)
-        for table in (TABLE_RDATA, TABLE_FORM):
-            status = _ensure_canonical(cur, schema, table, ts)
-            if status == "created":
-                conn.commit()
-                print(
-                    f"DW: CREATE {schema}.{table} "
-                    f"@ {cv['host']}:{cv['port']}/{cv['database']}",
-                    flush=True,
-                )
-            else:
-                print(f"DW: {schema}.{table} ya existe (ok)", flush=True)
+        status = _ensure_canonical(cur, schema, TABLE_RDATA, ts)
+        if status == "created":
+            conn.commit()
+            print(
+                f"DW: CREATE {schema}.{TABLE_RDATA} "
+                f"@ {cv['host']}:{cv['port']}/{cv['database']}",
+                flush=True,
+            )
+        else:
+            print(f"DW: {schema}.{TABLE_RDATA} ya existe (ok)", flush=True)
+
+        status = _ensure_form(cur, schema, ts)
+        if status == "created":
+            conn.commit()
+            print(
+                f"DW: CREATE {schema}.{TABLE_FORM} (+FECHA_CARGA) "
+                f"@ {cv['host']}:{cv['port']}/{cv['database']}",
+                flush=True,
+            )
+        elif status == "altered":
+            conn.commit()
+            print(
+                f"DW: ALTER {schema}.{TABLE_FORM} ADD FECHA_CARGA",
+                flush=True,
+            )
+        else:
+            print(f"DW: {schema}.{TABLE_FORM} ya existe con FECHA_CARGA (ok)", flush=True)
         cur.close()
     finally:
         conn.close()

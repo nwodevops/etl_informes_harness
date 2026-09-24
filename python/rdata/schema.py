@@ -285,3 +285,25 @@ def oracle_ddl(schema: str, table: str) -> str:
             lines.append(f"  {name} VARCHAR2(500)")
     body = ",\n".join(lines)
     return f"CREATE TABLE {schema}.{table} (\n{body}\n)"
+
+
+FECHA_CARGA_COMMENT = (
+    "Instante de carga ETL hacia DW_INF_CONSOL_FORM (Hop pl_form_informes)."
+)
+
+
+def oracle_ddl_form(schema: str, table: str) -> str:
+    """CREATE DW_INF_CONSOL_FORM = canónico + FECHA_CARGA (solo FORM)."""
+    ddl = oracle_ddl(schema, table).rstrip()
+    if not ddl.endswith(")"):
+        raise ValueError("oracle_ddl: formato inesperado")
+    return ddl[:-1] + ",\n  FECHA_CARGA DATE\n)"
+
+
+def oracle_comment_statements_form(schema: str, table: str) -> list[str]:
+    stmts = oracle_comment_statements(schema, table)
+    stmts.append(
+        f"COMMENT ON COLUMN {schema}.{table}.FECHA_CARGA IS "
+        f"{_sql_quote(FECHA_CARGA_COMMENT)}"
+    )
+    return stmts

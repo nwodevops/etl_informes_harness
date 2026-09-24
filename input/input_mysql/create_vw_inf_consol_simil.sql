@@ -272,3 +272,5 @@ LEFT JOIN hec_cnt hc
   ON hc.NU_IDINFORME = i.NU_IDINFORME
 LEFT JOIN tiposup ts
   ON ts.TX_CODIGO_CAT = i.TX_IDTIPOSUPERVISION;
+-- FECHA_CARGA=NOW() solo en vw_inf_consol_simil.sql (Hop → DW_INF_CONSOL_FORM).
+
