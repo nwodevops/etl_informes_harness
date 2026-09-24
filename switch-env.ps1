@@ -42,6 +42,7 @@ if (-not (Test-Path -LiteralPath $projFile)) {
 $existing = @{}
 if ($proj.config.variables) {
     foreach ($v in $proj.config.variables) {
+        if ([string]::IsNullOrEmpty($v.name)) { continue }
         if (-not $existing.ContainsKey($v.name)) { $existing[$v.name] = $v }
     }
 }

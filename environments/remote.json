@@ -32,32 +32,32 @@
     },
     {
       "name": "DB_ORA_SISUD_URL",
-      "value": "jdbc:oracle:thin:@//<HOST>:<PUERTO>/<SERVICE>",
+      "value": "jdbc:oracle:thin:@//odaprod-scan:1534/oefabd",
       "description": "Oracle fuente REMOTO (CSEPDV @ odaprod-scan:1534/oefabd — ver docs/credenciales/remote.txt)"
     },
     {
       "name": "DB_ORA_SISUD_HOST",
-      "value": "<HOST>",
+      "value": "odaprod-scan",
       "description": "Host Oracle fuente (odaprod-scan)"
     },
     {
       "name": "DB_ORA_SISUD_PORT",
-      "value": "<PUERTO>",
+      "value": "1534",
       "description": "Puerto Oracle fuente (1534)"
     },
     {
       "name": "DB_ORA_SISUD_DATABASE",
-      "value": "<SERVICE>",
+      "value": "oefabd",
       "description": "Service Oracle fuente (oefabd)"
     },
     {
       "name": "DB_ORA_SISUD_USERNAME",
-      "value": "<USUARIO>",
+      "value": "CSEPDV",
       "description": "Usuario Oracle fuente (CSEPDV)"
     },
     {
       "name": "DB_ORA_SISUD_PASSWORD",
-      "value": "<PASSWORD>",
+      "value": "vWqFlNPWZQ0Fov",
       "description": "Password Oracle fuente"
     },
     {
@@ -92,92 +92,92 @@
     },
     {
       "name": "DB_ORA_DW_URL",
-      "value": "jdbc:oracle:thin:@//<HOST>:<PUERTO>/<SERVICE>",
+      "value": "jdbc:oracle:thin:@//10.6.0.15:1532/dvoefacore",
       "description": "Oracle DW REMOTO (REPOCSEP @ 10.6.0.15:1532/dvoefacore — ver docs/credenciales/remote.txt)"
     },
     {
       "name": "DB_ORA_DW_HOST",
-      "value": "<HOST>",
+      "value": "10.6.0.15",
       "description": "Host Oracle DW (10.6.0.15)"
     },
     {
       "name": "DB_ORA_DW_PORT",
-      "value": "<PUERTO>",
+      "value": "1532",
       "description": "Puerto Oracle DW (1532)"
     },
     {
       "name": "DB_ORA_DW_DATABASE",
-      "value": "<SERVICE>",
+      "value": "dvoefacore",
       "description": "Service Oracle DW (dvoefacore)"
     },
     {
       "name": "DB_ORA_DW_USERNAME",
-      "value": "<USUARIO>",
+      "value": "REPOCSEP",
       "description": "Usuario Oracle DW (REPOCSEP)"
     },
     {
       "name": "DB_ORA_DW_PASSWORD",
-      "value": "<PASSWORD>",
+      "value": "desarrollo24",
       "description": "Password Oracle DW"
     },
     {
       "name": "DB_MYSQL_URL",
-      "value": "jdbc:mysql://<HOST>:<PUERTO>/<DATABASE>",
+      "value": "jdbc:mysql://10.1.1.217:3306/gappsdb",
       "description": "JDBC URL MySQL HEC (gappsdb)"
     },
     {
       "name": "DB_MYSQL_HOST",
-      "value": "<HOST>",
+      "value": "10.1.1.217",
       "description": "Host MySQL HEC"
     },
     {
       "name": "DB_MYSQL_PORT",
-      "value": "<PUERTO>",
+      "value": "3306",
       "description": "Puerto MySQL"
     },
     {
       "name": "DB_MYSQL_DATABASE",
-      "value": "<DATABASE>",
+      "value": "gappsdb",
       "description": "Base MySQL HEC"
     },
     {
       "name": "DB_MYSQL_USERNAME",
-      "value": "<USUARIO>",
+      "value": "gapps",
       "description": "Usuario MySQL HEC"
     },
     {
       "name": "DB_MYSQL_PASSWORD",
-      "value": "<PASSWORD>",
+      "value": "Knjux4a9tJCbrly!",
       "description": "Password MySQL HEC"
     },
     {
       "name": "DB_MYSQL_DW_URL",
-      "value": "jdbc:mysql://<HOST>:<PUERTO>/<DATABASE>",
+      "value": "jdbc:mysql://10.1.1.217:3306/gappsdb",
       "description": "JDBC URL MySQL DW mirror (gappsdb)"
     },
     {
       "name": "DB_MYSQL_DW_HOST",
-      "value": "<HOST>",
+      "value": "10.1.1.217",
       "description": "Host MySQL DW"
     },
     {
       "name": "DB_MYSQL_DW_PORT",
-      "value": "<PUERTO>",
+      "value": "3306",
       "description": "Puerto MySQL DW"
     },
     {
       "name": "DB_MYSQL_DW_DATABASE",
-      "value": "<DATABASE>",
+      "value": "gappsdb",
       "description": "Base MySQL DW"
     },
     {
       "name": "DB_MYSQL_DW_USERNAME",
-      "value": "<USUARIO>",
+      "value": "gapps",
       "description": "Usuario MySQL DW"
     },
     {
       "name": "DB_MYSQL_DW_PASSWORD",
-      "value": "<PASSWORD>",
+      "value": "Knjux4a9tJCbrly!",
       "description": "Password MySQL DW"
     }
   ]
