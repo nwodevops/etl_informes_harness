@@ -79,6 +79,10 @@ def main() -> int:
     for nombre, df in salidas.items():
         print(f"Salida {nombre}: {len(df)} filas x {len(df.columns)} columnas")
 
+    from rdata.oficina import aplicar_pk_oficina  # noqa: E402
+
+    aplicar_pk_oficina(salidas[SALIDA_DF], root)
+
     escribir_ora = _load("escribir_oracle", HERE / "io" / "escribir_oracle.py")
     escribir_ora.escribir_oracle(salidas[SALIDA_DF], root, table=TABLE_RDATA)
 

@@ -128,13 +128,14 @@ def _user_tablespace(cur) -> str:
 
 
 def _ensure_canonical(cur, schema: str, table: str, ts: str) -> str:
-    if _table_exists(cur, table):
-        return "exists"
-    ddl = oracle_ddl(schema, table).rstrip() + f" TABLESPACE {ts}"
-    cur.execute(ddl)
-    for stmt in oracle_comment_statements(schema, table):
-        cur.execute(stmt)
-    return "created"
+    if not _table_exists(cur, table):
+        ddl = oracle_ddl(schema, table).rstrip() + f" TABLESPACE {ts}"
+        cur.execute(ddl)
+        for stmt in oracle_comment_statements(schema, table):
+            cur.execute(stmt)
+        return "created"
+    added = _oracle_add_pk(cur, schema, table)
+    return f"altered:{','.join(added)}" if added else "exists"
 
 
 def _column_exists(cur, table: str, column: str) -> bool:
@@ -148,8 +149,19 @@ def _column_exists(cur, table: str, column: str) -> bool:
     return int(cur.fetchone()[0]) > 0
 
 
+def _oracle_add_pk(cur, schema: str, table: str) -> list[str]:
+    if _column_exists(cur, table, "PK_OFICINA"):
+        return []
+    cur.execute(f"ALTER TABLE {schema}.{table} ADD PK_OFICINA VARCHAR2(20)")
+    cur.execute(
+        f"COMMENT ON COLUMN {schema}.{table}.PK_OFICINA IS "
+        "'Código de oficina T_SEP_OFICINA.PK_OFICINA (COR###).'"
+    )
+    return ["PK_OFICINA"]
+
+
 def _ensure_form(cur, schema: str, ts: str) -> str:
-    """CREATE FORM con FECHA_CARGA, o ALTER ADD si la tabla ya existía sin la col."""
+    """CREATE FORM con FECHA_CARGA y PK_OFICINA, o ALTER ADD si faltan."""
     table = TABLE_FORM
     if not _table_exists(cur, table):
         ddl = oracle_ddl_form(schema, table).rstrip() + f" TABLESPACE {ts}"
@@ -157,14 +169,16 @@ def _ensure_form(cur, schema: str, ts: str) -> str:
         for stmt in oracle_comment_statements_form(schema, table):
             cur.execute(stmt)
         return "created"
+    added: list[str] = []
     if not _column_exists(cur, table, "FECHA_CARGA"):
         cur.execute(f"ALTER TABLE {schema}.{table} ADD FECHA_CARGA DATE")
         cur.execute(
             f"COMMENT ON COLUMN {schema}.{table}.FECHA_CARGA IS "
             f"'{FECHA_CARGA_COMMENT.replace(chr(39), chr(39)+chr(39))}'"
         )
-        return "altered"
-    return "exists"
+        added.append("FECHA_CARGA")
+    added.extend(_oracle_add_pk(cur, schema, table))
+    return f"altered:{','.join(added)}" if added else "exists"
 
 
 def _ora_col_type(
@@ -318,25 +332,38 @@ def _fetch_csep_cols(variables: dict[str, str]) -> list[tuple]:
         src.close()
 
 
+def _mysql_add_pk(cur, table: str) -> list[str]:
+    if _mysql_column_exists(cur, table, "PK_OFICINA"):
+        return []
+    cur.execute(
+        f"ALTER TABLE `{table}` ADD COLUMN `PK_OFICINA` VARCHAR(20) NULL "
+        f"COMMENT 'Código de oficina T_SEP_OFICINA.PK_OFICINA (COR###).'"
+    )
+    return ["PK_OFICINA"]
+
+
 def _ensure_mysql_rdata(cur) -> str:
-    if _mysql_table_exists(cur, TABLE_RDATA):
-        return "exists"
-    cur.execute(mysql_ddl(TABLE_RDATA))
-    return "created"
+    if not _mysql_table_exists(cur, TABLE_RDATA):
+        cur.execute(mysql_ddl(TABLE_RDATA))
+        return "created"
+    added = _mysql_add_pk(cur, TABLE_RDATA)
+    return f"altered:{','.join(added)}" if added else "exists"
 
 
 def _ensure_mysql_form(cur) -> str:
     if not _mysql_table_exists(cur, TABLE_FORM):
         cur.execute(mysql_ddl_form(TABLE_FORM))
         return "created"
+    added: list[str] = []
     if not _mysql_column_exists(cur, TABLE_FORM, "FECHA_CARGA"):
         cmt = FECHA_CARGA_COMMENT.replace("\\", "\\\\").replace("'", "''")
         cur.execute(
             f"ALTER TABLE `{TABLE_FORM}` ADD COLUMN `FECHA_CARGA` DATETIME NULL "
             f"COMMENT '{cmt}'"
         )
-        return "altered"
-    return "exists"
+        added.append("FECHA_CARGA")
+    added.extend(_mysql_add_pk(cur, TABLE_FORM))
+    return f"altered:{','.join(added)}" if added else "exists"
 
 
 def _ensure_mysql_csep(cur, variables: dict[str, str]) -> str:
@@ -362,9 +389,10 @@ def _ensure_mysql_all(variables: dict[str, str]) -> None:
                     f"@ {cv['host']}:{cv['port']}/{cv['database']}",
                     flush=True,
                 )
-            elif status == "altered":
+            elif status.startswith("altered"):
                 conn.commit()
-                print(f"MySQL DW: ALTER {label} ADD FECHA_CARGA", flush=True)
+                cols = status.split(":", 1)[1]
+                print(f"MySQL DW: ALTER {label} ADD {cols}", flush=True)
             else:
                 print(f"MySQL DW: {label} ya existe (ok)", flush=True)
 
@@ -410,6 +438,12 @@ def main(argv: list[str] | None = None) -> int:
                 f"@ {cv['host']}:{cv['port']}/{cv['database']}",
                 flush=True,
             )
+        elif status.startswith("altered"):
+            conn.commit()
+            print(
+                f"DW: ALTER {schema}.{TABLE_RDATA} ADD {status.split(':', 1)[1]}",
+                flush=True,
+            )
         else:
             print(f"DW: {schema}.{TABLE_RDATA} ya existe (ok)", flush=True)
 
@@ -421,14 +455,14 @@ def main(argv: list[str] | None = None) -> int:
                 f"@ {cv['host']}:{cv['port']}/{cv['database']}",
                 flush=True,
             )
-        elif status == "altered":
+        elif status.startswith("altered"):
             conn.commit()
             print(
-                f"DW: ALTER {schema}.{TABLE_FORM} ADD FECHA_CARGA",
+                f"DW: ALTER {schema}.{TABLE_FORM} ADD {status.split(':', 1)[1]}",
                 flush=True,
             )
         else:
-            print(f"DW: {schema}.{TABLE_FORM} ya existe con FECHA_CARGA (ok)", flush=True)
+            print(f"DW: {schema}.{TABLE_FORM} ya existe (ok)", flush=True)
         cur.close()
     finally:
         conn.close()

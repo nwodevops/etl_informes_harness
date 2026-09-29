@@ -40,6 +40,7 @@ CORE: list[tuple[str, str, str]] = [
     ("SUPERV_ORIENTATIVA", "VARCHAR", "VARCHAR2"),
     ("MES_META", "VARCHAR", "VARCHAR2"),
     ("TIPO_INF", "VARCHAR", "VARCHAR2"),
+    ("PK_OFICINA", "VARCHAR", "VARCHAR2"),
     ("TXCOORDINACION", "VARCHAR", "VARCHAR2"),
     ("OBLIG_CUMPL", "BIGINT", "NUMBER"),
     ("OBL_INCUMPLIDA", "BIGINT", "NUMBER"),
@@ -158,6 +159,7 @@ COLUMN_COMMENTS: dict[str, str] = {
     "SUPERV_ORIENTATIVA": "Indicador / marca de supervisión orientativa.",
     "MES_META": "Mes meta asociado al informe.",
     "TIPO_INF": "Tipo de informe.",
+    "PK_OFICINA": "Código de oficina T_SEP_OFICINA.PK_OFICINA (COR###). FORM: TX_COORDINACION. RData: cruce del nombre en TXCOORDINACION.",
     "TXCOORDINACION": "Coordinación (EQUIV: TXCOORDINACION, COORDINACION).",
     "OBLIG_CUMPL": "Cantidad de obligaciones cumplidas.",
     "OBL_INCUMPLIDA": "Cantidad de obligaciones incumplidas.",
@@ -277,6 +279,8 @@ def oracle_ddl(schema: str, table: str) -> str:
             lines.append(f"  {name} DATE")
         elif ora == "NUMBER":
             lines.append(f"  {name} NUMBER")
+        elif name == "PK_OFICINA":
+            lines.append(f"  {name} VARCHAR2(20)")
         elif name in wide_2000:
             lines.append(f"  {name} VARCHAR2(2000)")
         elif name in wide_1000:
@@ -320,6 +324,8 @@ def _mysql_col_type(name: str, ora: str) -> str:
         return "DATETIME"
     if ora == "NUMBER":
         return "DOUBLE"
+    if name == "PK_OFICINA":
+        return "VARCHAR(20)"
     return "TEXT"
 
 
