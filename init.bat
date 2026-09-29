@@ -63,6 +63,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
+echo ==^> FORM PK_OFICINA en mysql_dw
+"%PY%" "%~dp0python\check_form_pk.py"
+if errorlevel 1 (
+  echo FAIL: check_form_pk
+  exit /b 1
+)
+
 echo.
-echo HARNESS OK — diario FORM + CSEP ^(Hop^). RData: wf_create_stg_windows bajo demanda.
+echo HARNESS OK — diario FORM + CSEP ^(Hop^) y PK_OFICINA en FORM. RData: wf_create_stg_windows ^(no entra en este chequeo^).
 exit /b 0

@@ -2,15 +2,16 @@
   "project": "etl_informes_harness",
   "reglas": {
     "una_feature_activa": "Como máximo un item con status in_progress",
-    "verificacion": "./init.sh debe terminar en HARNESS OK",
-    "trazabilidad": "Implementador escribe progress/impl_<id>.md"
+    "verificacion": "El criterio de la feature es la prueba. ./init.sh (HARNESS OK) cubre el diario FORM+CSEP y el conteo PK_OFICINA en FORM. No cubre RData.",
+    "mismo_cierre": "El cambio de alcance y su ítem en este archivo se cierran en el mismo trabajo, con progress/impl_<id>.md",
+    "trazabilidad": "Al pasar a done, append en progress/history.md"
   },
   "features": [
     {
       "id": "fase-1-entorno",
       "title": "Hop + H2 + Python + harness",
       "status": "done",
-      "criterio": "CHECKPOINTS.md#fase-1",
+      "criterio": "Entorno Hop + H2 + Python del cascarón inicial",
       "doc": "README.md"
     },
     {
@@ -66,7 +67,7 @@
       "id": "fase-9-pk-oficina",
       "title": "PK_OFICINA en FORM y RData",
       "status": "done",
-      "criterio": "FORM copia COR### desde T_SEP_OFICINA; RData cruza TXCOORDINACION con catálogo + oficina_alias.yaml; ALTER en oracle_dw y mysql_dw; CSEP sin cambio",
+      "criterio": "init.sh imprime FORM PK_OFICINA con filas cruzadas en mysql_dw. RData: oficina.py + oficina_alias.yaml (no lo cubre init.sh). CSEP sin cambio",
       "doc": "progress/impl_fase-9-pk-oficina.md"
     }
   ]

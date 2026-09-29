@@ -2,7 +2,7 @@
 
 ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md`](docs/arquitectura.md).
 
-**Verificación diaria:** [`./init.sh`](init.sh) / [`./init.bat`](init.bat) → **`HARNESS OK`** (FORM + CSEP). Criterios: [`CHECKPOINTS.md`](CHECKPOINTS.md).
+**Verificación diaria:** [`./init.sh`](init.sh) / [`./init.bat`](init.bat) → **`HARNESS OK`**. Criterio de cada feature: [`feature_list.json`](feature_list.json). Compuertas globales: [`CHECKPOINTS.md`](CHECKPOINTS.md).
 
 ## Harness
 
@@ -51,10 +51,10 @@ ETL **Apache Hop + H2 in-memory + Python**. Arquitectura: [`docs/arquitectura.md
 
 `init.sh` / `init.bat` → **HARNESS OK** diario:
 
-1. `DW_INF_CONSOL_FORM` — Hop `pl_form_informes` → **oracle_dw + mysql_dw**
+1. `DW_INF_CONSOL_FORM` — Hop `pl_form_informes` → **oracle_dw + mysql_dw**, luego conteo `PK_OFICINA` en MySQL DW
 2. `DW_INF_CSEP_INFORMES_VIEW` — Hop `pl_csep_informes` → **oracle_dw + mysql_dw**
 
-`DW_INF_CONSOL_RDATA` se refresca solo con `wf_create_stg*` (Oracle + MySQL vía `main.py`).
+`DW_INF_CONSOL_RDATA` (incluido el cruce `PK_OFICINA`) se refresca solo con `wf_create_stg*`. **HARNESS OK no lo cubre.**
 
 Requiere **hop-run**, Oracle DW, **MySQL HEC** (`mysql`), **MySQL DW** (`mysql_dw`) y SISUD vivos. RData/H2/Rscript solo para `wf_create_stg*`.
 
@@ -67,6 +67,7 @@ Requiere **hop-run**, Oracle DW, **MySQL HEC** (`mysql`), **MySQL DW** (`mysql_d
 5. No `import io` (stdlib).
 6. Destinos **oracle_dw** y **mysql_dw**: **TRUNCATE** en carga; CREATE si faltan → `ensure_dw_tables` en `wf_create_stg*`.
 7. FORM/CSEP → pipelines Hop (copy a ambos destinos). Fuente HEC ≠ `mysql_dw`.
+8. Cambio de alcance: ítem en `feature_list.json` (criterio + `progress/impl_<id>.md`) en el mismo trabajo. El criterio de esa lista es la prueba; [`CHECKPOINTS.md`](CHECKPOINTS.md) solo fija compuertas globales.
 
 ## Orden de ejecución
 

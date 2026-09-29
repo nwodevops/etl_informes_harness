@@ -1,51 +1,20 @@
-# CHECKPOINTS — arquetipo mínimo
+# CHECKPOINTS
 
-Criterios para marcar features `done` en [`feature_list.json`](feature_list.json).  
-Verificación: [`./init.sh`](init.sh).
-
----
+Compuertas globales. El criterio de cada feature está solo en [`feature_list.json`](feature_list.json).
 
 ## Global
 
-- [ ] `./init.sh` termina con **`HARNESS OK`**.
-- [ ] Sin passwords reales en `project-config.json` / `environments/`.
-- [ ] Log sin literales `${VAR}`.
-- [ ] Un solo `.py` en `logica/`.
-- [ ] Máximo **una** feature `in_progress`.
+- [ ] `./init.sh` o `init.bat` termina en **HARNESS OK**
+- [ ] Como máximo una feature `in_progress`
+- [ ] Un solo `.py` en `logica/`
+- [ ] Log Hop sin literales `${VAR}`
+- [ ] El ítem de `feature_list.json` y su `progress/impl_<id>.md` se cierran en el mismo trabajo que el cambio
 
----
+## Qué prueba HARNESS OK
 
-## Fase 1 — Entorno {#fase-1}
+1. Hop `pl_form_informes` y `pl_csep_informes` (Oracle + MySQL DW)
+2. `python/check_form_pk.py`: `DW_INF_CONSOL_FORM` en `mysql_dw` tiene `PK_OFICINA` y, si hay filas, al menos una con código
 
-- [ ] H2 levanta en puerto 9092 (`reset_and_create.sh`).
-- [ ] `python/stg/create_stg.py` OK (puede ser no-op con `sources: []`).
-- [ ] `python/main.py` OK con `logica/demo.py`.
-- [ ] `wf_main.hwf` ejecutable en Hop GUI.
+## Qué no prueba
 
----
-
-## Fase 2 — Fuentes STG {#fase-2}
-
-- [ ] Al menos una fuente en `inputs.yaml`.
-- [ ] Tabla `STG_*` creada en H2.
-- [ ] Pipeline `pl_stage_*.hpl` cableado en `wf_main.hwf`.
-- [ ] Hop carga filas en STG (conteo > 0 en log).
-
-Ver skill `hop-python-etl` e [`inputs.example.yaml`](.agents/skills/hop-python-etl/inputs.example.yaml).
-
----
-
-## Fase 3 — Lógica {#fase-3}
-
-- [ ] Claves STG en `python/io/leer_h2.py`.
-- [ ] `logica/<tu_logica>.py` produce `RESULTADO` con filas > 0.
-- [ ] `output/resultado.xlsx` generado (si se usa salida Excel).
-
-Contrato: [`python/CONTRATO.md`](python/CONTRATO.md).
-
----
-
-## Fuera de alcance del cascarón
-
-- Modelo dimensional Oracle (`cargar_dw.py`) → copiar cuando el proyecto lo pida.
-- Fases Kimball / indicadores → no vienen en esta plantilla.
+`DW_INF_CONSOL_RDATA` y el cruce de `TXCOORDINACION` en `python/rdata/oficina.py`. Eso corre con `wf_create_stg` / `wf_create_stg_windows`.

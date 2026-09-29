@@ -73,3 +73,8 @@ Al cerrar una feature, append aquí: fecha, id, resumen, evidencia (`progress/im
 - `PK_OFICINA` en FORM y RData (Oracle + MySQL DW). CSEP sin cambio.
 - FORM: código del join `T_SEP_OFICINA`. RData: cruce de `TXCOORDINACION` + `oficina_alias.yaml`.
 - Evidencia: `progress/impl_fase-9-pk-oficina.md`; init HARNESS OK (FORM `COR065` 16 + `COR040` 3).
+
+## 2026-09-28 — harness
+
+- Criterio de cada feature solo en `feature_list.json`. CHECKPOINTS queda en compuertas globales.
+- Sin revisor obligatorio. `init.sh` / `init.bat` cuentan `PK_OFICINA` en FORM (`python/check_form_pk.py`). RData sigue fuera de HARNESS OK.

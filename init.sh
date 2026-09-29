@@ -66,5 +66,8 @@ fi
 run_hop_pipeline "pipelines/pl_form_informes.hpl"
 run_hop_pipeline "pipelines/pl_csep_informes.hpl"
 
+step "FORM PK_OFICINA en mysql_dw"
+"$PY" python/check_form_pk.py
+
 echo
-echo -e "${GREEN}HARNESS OK${NC} — diario FORM + CSEP (Hop). RData: play wf_create_stg bajo demanda."
+echo -e "${GREEN}HARNESS OK${NC} — diario FORM + CSEP (Hop) y PK_OFICINA en FORM. RData: wf_create_stg (no entra en este chequeo)."
