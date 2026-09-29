@@ -61,6 +61,13 @@
       "status": "done",
       "criterio": "3 tablas en oracle_dw y mysql_dw; FORM/CSEP Hop copy; RDATA main.py escribir_mysql; ensure CREATE MySQL",
       "doc": "progress/impl_fase-8-mysql-dw-mirror.md"
+    },
+    {
+      "id": "fase-9-pk-oficina",
+      "title": "PK_OFICINA en FORM y RData",
+      "status": "done",
+      "criterio": "FORM copia COR### desde T_SEP_OFICINA; RData cruza TXCOORDINACION con catálogo + oficina_alias.yaml; ALTER en oracle_dw y mysql_dw; CSEP sin cambio",
+      "doc": "progress/impl_fase-9-pk-oficina.md"
     }
   ]
 }

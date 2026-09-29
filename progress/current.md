@@ -1,6 +1,6 @@
 # Sesión activa
 
-**Feature:** `fase-8-mysql-dw-mirror` (done)
+**Feature:** `fase-9-pk-oficina` (done)
 **Rama:** `feature/mysql-dw-mirror`
 
-Dual-write verificado local: FORM 19 + CSEP 53288 en `mysql_dw`. RDATA tabla vacía hasta play `wf_create_stg`.
+`PK_OFICINA` en FORM y RData. Ver `progress/impl_fase-9-pk-oficina.md`.

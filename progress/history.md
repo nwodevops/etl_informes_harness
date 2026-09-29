@@ -67,3 +67,9 @@ Al cerrar una feature, append aquí: fecha, id, resumen, evidencia (`progress/im
 - Dual-write `DW_INF_*` a `oracle_dw` + `mysql_dw` (`DB_MYSQL_DW_*`; ≠ fuente HEC)
 - Hop copy FORM/CSEP; RDATA `escribir_mysql` vía `main.py`; ensure CREATE MySQL
 - Evidencia: `progress/impl_fase-8-mysql-dw-mirror.md`; init HARNESS OK (FORM 19 + CSEP 53288 en MySQL)
+
+## 2026-09-28 — fase-9-pk-oficina
+
+- `PK_OFICINA` en FORM y RData (Oracle + MySQL DW). CSEP sin cambio.
+- FORM: código del join `T_SEP_OFICINA`. RData: cruce de `TXCOORDINACION` + `oficina_alias.yaml`.
+- Evidencia: `progress/impl_fase-9-pk-oficina.md`; init HARNESS OK (FORM `COR065` 16 + `COR040` 3).
