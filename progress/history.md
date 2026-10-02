@@ -74,6 +74,11 @@ Al cerrar una feature, append aquí: fecha, id, resumen, evidencia (`progress/im
 - FORM: código del join `T_SEP_OFICINA`. RData: cruce de `TXCOORDINACION` + `oficina_alias.yaml`.
 - Evidencia: `progress/impl_fase-9-pk-oficina.md`; init HARNESS OK (FORM `COR065` 16 + `COR040` 3).
 
+## 2026-10-01 — fase-10-iduf-sig
+
+- `IDUF_SIG` en `DW_INF_CONSOL_RDATA` (Oracle + MySQL DW). Coalesce de `ID_UF` sin cambio. FORM sin la columna. CSEP no se altera.
+- Evidencia: `progress/impl_fase-10-iduf-sig.md`. `init.sh` no cubre RData.
+
 ## 2026-09-28 — harness
 
 - Criterio de cada feature solo en `feature_list.json`. CHECKPOINTS queda en compuertas globales.

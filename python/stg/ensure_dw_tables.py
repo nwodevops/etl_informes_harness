@@ -23,6 +23,7 @@ if str(_PY) not in sys.path:
 
 from core.config import load_vars, project_root, require_live_conn  # noqa: E402
 from rdata.schema import (  # noqa: E402
+    COLUMN_COMMENTS,
     FECHA_CARGA_COMMENT,
     mysql_ddl,
     mysql_ddl_form,
@@ -135,6 +136,7 @@ def _ensure_canonical(cur, schema: str, table: str, ts: str) -> str:
             cur.execute(stmt)
         return "created"
     added = _oracle_add_pk(cur, schema, table)
+    added.extend(_oracle_add_iduf_sig(cur, schema, table))
     return f"altered:{','.join(added)}" if added else "exists"
 
 
@@ -158,6 +160,16 @@ def _oracle_add_pk(cur, schema: str, table: str) -> list[str]:
         "'Código de oficina T_SEP_OFICINA.PK_OFICINA (COR###).'"
     )
     return ["PK_OFICINA"]
+
+
+def _oracle_add_iduf_sig(cur, schema: str, table: str) -> list[str]:
+    """Solo DW_INF_CONSOL_RDATA. No llamar desde FORM."""
+    if _column_exists(cur, table, "IDUF_SIG"):
+        return []
+    cmt = COLUMN_COMMENTS["IDUF_SIG"].replace("'", "''")
+    cur.execute(f"ALTER TABLE {schema}.{table} ADD IDUF_SIG VARCHAR2(20)")
+    cur.execute(f"COMMENT ON COLUMN {schema}.{table}.IDUF_SIG IS '{cmt}'")
+    return ["IDUF_SIG"]
 
 
 def _ensure_form(cur, schema: str, ts: str) -> str:
@@ -342,11 +354,24 @@ def _mysql_add_pk(cur, table: str) -> list[str]:
     return ["PK_OFICINA"]
 
 
+def _mysql_add_iduf_sig(cur, table: str) -> list[str]:
+    """Solo DW_INF_CONSOL_RDATA. No llamar desde FORM."""
+    if _mysql_column_exists(cur, table, "IDUF_SIG"):
+        return []
+    cmt = COLUMN_COMMENTS["IDUF_SIG"].replace("\\", "\\\\").replace("'", "''")
+    cur.execute(
+        f"ALTER TABLE `{table}` ADD COLUMN `IDUF_SIG` VARCHAR(20) NULL "
+        f"COMMENT '{cmt}'"
+    )
+    return ["IDUF_SIG"]
+
+
 def _ensure_mysql_rdata(cur) -> str:
     if not _mysql_table_exists(cur, TABLE_RDATA):
         cur.execute(mysql_ddl(TABLE_RDATA))
         return "created"
     added = _mysql_add_pk(cur, TABLE_RDATA)
+    added.extend(_mysql_add_iduf_sig(cur, TABLE_RDATA))
     return f"altered:{','.join(added)}" if added else "exists"
 
 

@@ -42,6 +42,7 @@ Presentes en ambos esquemas actuales (nombres directos):
 |---|---|
 | `ID_ADMINISTRADO` | `IDADMIN`, `IDAMIN`, `ID_ADMIN`, `IDADMINISTRADO` |
 | `ID_UF` | `IDUF`, `ID_UF`, `IDUF_SIG` |
+| `IDUF_SIG` | copia directa (no coalesce). Sigue siendo la tercera fuente de `ID_UF`. En BD el código `UF…` es distinto del `SUR…` de `ID_UF`. |
 | `ADMIN` | `ADMIN`, `ADMINISTRADO_INAPS`, `TXADMINISTRADO_ADM` |
 | `UF` | `UF`, `UF_INAPS`, `TXUNIDAD` |
 | `RECOM_ACCION` | `RECOM_INAPS`, `RECOM_MA`, `RECOM_MEDIDAS` |
@@ -102,7 +103,7 @@ NULL en filas BD: `OD`, `CATEG`, `COMPET`, `TIPO_OD`.
 | `COORDINACION`, `TXACCION`, `TXTIPSUP`, `TXNUMEXP` | `R1_CUBIERTO_EQUIV` | Absorbidos hacia canónicas vigentes |
 | `SECTOR`, `SUBSECTOR` | `R1_CUBIERTO_EQUIV` | → `SECTOR_O_SUBSECTOR` |
 | `RECOM_INAPS`, `RECOM_MA` | `R1_CUBIERTO_EQUIV` | → `RECOM_ACCION` |
-| `ADMINISTRADO_INAPS`, `UF_INAPS`, `IDADMIN`, `IDUF_SIG` | `R1_CUBIERTO_EQUIV` | → `ADMIN` / `UF` / `ID_*` |
+| `ADMINISTRADO_INAPS`, `UF_INAPS`, `IDADMIN` | `R1_CUBIERTO_EQUIV` | → `ADMIN` / `UF` / `ID_ADMINISTRADO` |
 
 ---
 

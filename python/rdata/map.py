@@ -16,6 +16,7 @@ from rdata.schema import (
     CORE,
     DATE_COLS,
     EXTRAS_BD,
+    EXTRAS_EQUIV,
     EXTRAS_OD,
     NUMBER_COLS,
 )
@@ -25,7 +26,9 @@ DIRECT_COLS = (
     {c[0] for c in CORE}
     | {c[0] for c in EXTRAS_BD}
     | {c[0] for c in EXTRAS_OD}
+    | {c[0] for c in EXTRAS_EQUIV}
 ) - {"TIPO_OD", "RECOMENDACION_MEDIDAS_ADMIN"}  # solo vía EQUIV
+# Claves de EQUIV se saltan en el bucle directo; IDUF_SIG no es clave y se copia.
 
 # coalesce: primer no nulo gana (orden = prioridad)
 EQUIV: dict[str, list[str]] = {

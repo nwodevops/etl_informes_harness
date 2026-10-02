@@ -65,9 +65,14 @@ CORE: list[tuple[str, str, str]] = [
 EXTRAS_EQUIV: list[tuple[str, str, str]] = [
     ("ID_ADMINISTRADO", "VARCHAR", "VARCHAR2"),
     ("ID_UF", "VARCHAR", "VARCHAR2"),
+    # Copia directa (no es clave de EQUIV). Sigue siendo fuente de ID_UF.
+    ("IDUF_SIG", "VARCHAR", "VARCHAR2"),
     ("RECOM_ACCION", "VARCHAR", "VARCHAR2"),
     ("SECTOR_O_SUBSECTOR", "VARCHAR", "VARCHAR2"),
 ]
+
+# Solo DW_INF_CONSOL_RDATA. FORM y CSEP no la llevan.
+RDATA_ONLY_COLS = frozenset({"IDUF_SIG"})
 
 EXTRAS_BD: list[tuple[str, str, str]] = [
     ("DIREC", "VARCHAR", "VARCHAR2"),
@@ -180,7 +185,8 @@ COLUMN_COMMENTS: dict[str, str] = {
     "TX_OTRO_DOCUMENTO_PREVIO": "Otro documento previo (texto).",
     "FE_DERIV_DOC_DERIVACION": "Fecha de derivación del documento de derivación.",
     "ID_ADMINISTRADO": "Id del administrado (EQUIV: IDADMIN, IDAMIN, ID_ADMIN, IDADMINISTRADO).",
-    "ID_UF": "Id de la unidad fiscalizable (EQUIV: IDUF, ID_UF, IDUF_SIG).",
+    "ID_UF": "Id de la unidad fiscalizable (EQUIV: IDUF, ID_UF, IDUF_SIG). IDUF_SIG también se persiste en su columna.",
+    "IDUF_SIG": "Código SIG de la unidad fiscalizable (UF#######). Copia directa del RData. En BD es distinto de ID_UF (SUR#######).",
     "RECOM_ACCION": "Recomendación de acción / medidas (EQUIV: RECOM_INAPS, RECOM_MA, RECOM_MEDIDAS).",
     "SECTOR_O_SUBSECTOR": "Sector (BD) o subsector (OD) coalescido (EQUIV: SECTOR, SUBSECTOR, TXSUBSECTOR_UND).",
     "DIREC": "[BD] Dirección / área orgánica.",
@@ -223,13 +229,18 @@ def _sql_quote(text: str) -> str:
     return "'" + text.replace("'", "''") + "'"
 
 
-def oracle_comment_statements(schema: str, table: str) -> list[str]:
+def oracle_comment_statements(
+    schema: str, table: str, skip: set[str] | None = None
+) -> list[str]:
     """COMMENT ON TABLE/COLUMN para APP.DW_INF_CONSOL_RDATA."""
+    skip = skip or set()
     stmts = [f"COMMENT ON TABLE {schema}.{table} IS {_sql_quote(TABLE_COMMENT)}"]
     missing = [n for n in CANONICAL_NAMES if n not in COLUMN_COMMENTS]
     if missing:
         raise ValueError(f"COLUMN_COMMENTS incompleto: {missing}")
     for name in CANONICAL_NAMES:
+        if name in skip:
+            continue
         stmts.append(
             f"COMMENT ON COLUMN {schema}.{table}.{name} IS "
             f"{_sql_quote(COLUMN_COMMENTS[name])}"
@@ -237,56 +248,64 @@ def oracle_comment_statements(schema: str, table: str) -> list[str]:
     return stmts
 
 
-def oracle_ddl(schema: str, table: str) -> str:
+_WIDE_1000 = {
+    "ARCHIVO",
+    "OBJETO_R",
+    "TXCOORDINACION",
+    "UF",
+    "ADMIN",
+    "COORDINADOR",
+    "DIRECTOR",
+    "OD",
+    "ADMINISTRADO_INAPS",
+    "PROVEIDO",
+    "NRO_DOC_CIERRE",
+    "EXPEDIENTE",
+    "INFORME",
+    "CUC_INAPS",
+    "ANALISTA_LEGAL",
+    "RESPONSABLE_COMISION",
+}
+_WIDE_2000 = {
+    "TIPIFICA_HECHO",
+    "MOTIVO_ARCHIV_CONOC",
+    "TX_DOCUMENTO_PREVIO",
+    "TX_OTRO_DOCUMENTO_PREVIO",
+    "RECOMENDACION_MEDIDAS_ADMIN",
+    "DOC_INICIO_ELA",
+    "DOC_CIERRE",
+    "HECHO_VERIF",
+    "RESULT_HECHO",
+    "RECOM_INFORME",
+    "RECOM_ACCION",
+    "RES_ACTA_MEDIDA",
+}
+
+
+def _oracle_col_line(name: str, ora: str) -> str:
+    if ora == "CLOB" or name == "HECHO_VERIF":
+        return f"  {name} CLOB"
+    if ora == "DATE":
+        return f"  {name} DATE"
+    if ora == "NUMBER":
+        return f"  {name} NUMBER"
+    if name in {"PK_OFICINA", "IDUF_SIG"}:
+        return f"  {name} VARCHAR2(20)"
+    if name in _WIDE_2000:
+        return f"  {name} VARCHAR2(2000)"
+    if name in _WIDE_1000:
+        return f"  {name} VARCHAR2(1000)"
+    return f"  {name} VARCHAR2(500)"
+
+
+def oracle_ddl(schema: str, table: str, skip: set[str] | None = None) -> str:
     """CREATE TABLE APP.DW_INF_CONSOL_RDATA …"""
-    wide_1000 = {
-        "ARCHIVO",
-        "OBJETO_R",
-        "TXCOORDINACION",
-        "UF",
-        "ADMIN",
-        "COORDINADOR",
-        "DIRECTOR",
-        "OD",
-        "ADMINISTRADO_INAPS",
-        "PROVEIDO",
-        "NRO_DOC_CIERRE",
-        "EXPEDIENTE",
-        "INFORME",
-        "CUC_INAPS",
-        "ANALISTA_LEGAL",
-        "RESPONSABLE_COMISION",
-    }
-    wide_2000 = {
-        "TIPIFICA_HECHO",
-        "MOTIVO_ARCHIV_CONOC",
-        "TX_DOCUMENTO_PREVIO",
-        "TX_OTRO_DOCUMENTO_PREVIO",
-        "RECOMENDACION_MEDIDAS_ADMIN",
-        "DOC_INICIO_ELA",
-        "DOC_CIERRE",
-        "HECHO_VERIF",
-        "RESULT_HECHO",
-        "RECOM_INFORME",
-        "RECOM_ACCION",
-        "RES_ACTA_MEDIDA",
-    }
-    lines: list[str] = []
-    for name, _h2, ora in CANONICAL:
-        if ora == "CLOB" or name == "HECHO_VERIF":
-            lines.append(f"  {name} CLOB")
-        elif ora == "DATE":
-            lines.append(f"  {name} DATE")
-        elif ora == "NUMBER":
-            lines.append(f"  {name} NUMBER")
-        elif name == "PK_OFICINA":
-            lines.append(f"  {name} VARCHAR2(20)")
-        elif name in wide_2000:
-            lines.append(f"  {name} VARCHAR2(2000)")
-        elif name in wide_1000:
-            lines.append(f"  {name} VARCHAR2(1000)")
-        else:
-            lines.append(f"  {name} VARCHAR2(500)")
+    skip = skip or set()
+    lines = [
+        _oracle_col_line(name, ora)
+        for name, _h2, ora in CANONICAL
+        if name not in skip
+    ]
     body = ",\n".join(lines)
     return f"CREATE TABLE {schema}.{table} (\n{body}\n)"
 
@@ -297,15 +316,15 @@ FECHA_CARGA_COMMENT = (
 
 
 def oracle_ddl_form(schema: str, table: str) -> str:
-    """CREATE DW_INF_CONSOL_FORM = canónico + FECHA_CARGA (solo FORM)."""
-    ddl = oracle_ddl(schema, table).rstrip()
+    """CREATE DW_INF_CONSOL_FORM = canónico sin columnas solo-RData + FECHA_CARGA."""
+    ddl = oracle_ddl(schema, table, skip=set(RDATA_ONLY_COLS)).rstrip()
     if not ddl.endswith(")"):
         raise ValueError("oracle_ddl: formato inesperado")
     return ddl[:-1] + ",\n  FECHA_CARGA DATE\n)"
 
 
 def oracle_comment_statements_form(schema: str, table: str) -> list[str]:
-    stmts = oracle_comment_statements(schema, table)
+    stmts = oracle_comment_statements(schema, table, skip=set(RDATA_ONLY_COLS))
     stmts.append(
         f"COMMENT ON COLUMN {schema}.{table}.FECHA_CARGA IS "
         f"{_sql_quote(FECHA_CARGA_COMMENT)}"
@@ -324,14 +343,19 @@ def _mysql_col_type(name: str, ora: str) -> str:
         return "DATETIME"
     if ora == "NUMBER":
         return "DOUBLE"
-    if name == "PK_OFICINA":
+    if name in {"PK_OFICINA", "IDUF_SIG"}:
         return "VARCHAR(20)"
     return "TEXT"
 
 
-def mysql_ddl(table: str) -> str:
+def mysql_ddl(table: str, skip: set[str] | None = None) -> str:
     """CREATE TABLE MySQL canónico (RDATA / base FORM)."""
-    lines = [f"  `{name}` {_mysql_col_type(name, ora)}" for name, _h2, ora in CANONICAL]
+    skip = skip or set()
+    lines = [
+        f"  `{name}` {_mysql_col_type(name, ora)}"
+        for name, _h2, ora in CANONICAL
+        if name not in skip
+    ]
     body = ",\n".join(lines)
     return (
         f"CREATE TABLE IF NOT EXISTS `{table}` (\n{body}\n) "
@@ -340,8 +364,8 @@ def mysql_ddl(table: str) -> str:
 
 
 def mysql_ddl_form(table: str) -> str:
-    """CREATE FORM MySQL = canónico + FECHA_CARGA."""
-    ddl = mysql_ddl(table).rstrip()
+    """CREATE FORM MySQL = canónico sin columnas solo-RData + FECHA_CARGA."""
+    ddl = mysql_ddl(table, skip=set(RDATA_ONLY_COLS)).rstrip()
     suffix = ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
     if not ddl.endswith(suffix):
         raise ValueError("mysql_ddl: formato inesperado")

@@ -69,6 +69,13 @@
       "status": "done",
       "criterio": "init.sh imprime FORM PK_OFICINA con filas cruzadas en mysql_dw. RData: oficina.py + oficina_alias.yaml (no lo cubre init.sh). CSEP sin cambio",
       "doc": "progress/impl_fase-9-pk-oficina.md"
+    },
+    {
+      "id": "fase-10-iduf-sig",
+      "title": "IDUF_SIG en DW_INF_CONSOL_RDATA",
+      "status": "done",
+      "criterio": "map conserva ID_UF (coalesce) y copia IDUF_SIG. ensure agrega la columna en RDATA Oracle y MySQL DW. FORM sin la columna. CSEP no se altera. init.sh no la cubre",
+      "doc": "progress/impl_fase-10-iduf-sig.md"
     }
   ]
 }
