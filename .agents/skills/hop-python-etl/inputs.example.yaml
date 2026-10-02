@@ -1,6 +1,6 @@
 # Manifiesto de fuentes — copiar a inputs.yaml en la raíz del proyecto.
 # Python (create_stg.py) solo DDL STG_*; Hop extrae filas.
-# Types: oracle | sheets | excel | rdata.
+# Types: oracle | sheets | excel.
 
 sources:
   - stg_table: STG_ORA_EJEMPLO
@@ -20,8 +20,3 @@ sources:
     worksheet: "Datos"
     header_row: 3
     types: varchar
-
-  - stg_table: STG_INF_CONSOL
-    type: rdata
-    path: input/input_rdata
-    glob: "*.RData"

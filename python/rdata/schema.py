@@ -64,6 +64,8 @@ CORE: list[tuple[str, str, str]] = [
 
 EXTRAS_EQUIV: list[tuple[str, str, str]] = [
     ("ID_ADMINISTRADO", "VARCHAR", "VARCHAR2"),
+    # Copia directa (no es clave de EQUIV). Sigue siendo fuente de ID_ADMINISTRADO.
+    ("IDADMINISTRADO", "VARCHAR", "VARCHAR2"),
     ("ID_UF", "VARCHAR", "VARCHAR2"),
     # Copia directa (no es clave de EQUIV). Sigue siendo fuente de ID_UF.
     ("IDUF_SIG", "VARCHAR", "VARCHAR2"),
@@ -71,8 +73,9 @@ EXTRAS_EQUIV: list[tuple[str, str, str]] = [
     ("SECTOR_O_SUBSECTOR", "VARCHAR", "VARCHAR2"),
 ]
 
-# Solo DW_INF_CONSOL_RDATA. FORM y CSEP no la llevan.
-RDATA_ONLY_COLS = frozenset({"IDUF_SIG"})
+# Solo DW_INF_CONSOL_RDATA. FORM no las lleva.
+RDATA_ONLY_COLS = frozenset({"IDUF_SIG", "IDADMINISTRADO"})
+_SHORT_VARCHAR = frozenset({"PK_OFICINA", "IDUF_SIG", "IDADMINISTRADO"})
 
 EXTRAS_BD: list[tuple[str, str, str]] = [
     ("DIREC", "VARCHAR", "VARCHAR2"),
@@ -184,7 +187,8 @@ COLUMN_COMMENTS: dict[str, str] = {
     "FE_REGISTRO_DOCUMENTO_PREVIO": "Fecha de registro del documento previo.",
     "TX_OTRO_DOCUMENTO_PREVIO": "Otro documento previo (texto).",
     "FE_DERIV_DOC_DERIVACION": "Fecha de derivación del documento de derivación.",
-    "ID_ADMINISTRADO": "Id del administrado (EQUIV: IDADMIN, IDAMIN, ID_ADMIN, IDADMINISTRADO).",
+    "ID_ADMINISTRADO": "Id del administrado (EQUIV: IDADMIN, IDAMIN, ID_ADMIN, IDADMINISTRADO). IDADMINISTRADO también se persiste en su columna.",
+    "IDADMINISTRADO": "Código de administrado del RData (ADM#####). Copia directa. Puede diferir de ID_ADMINISTRADO cuando IDAMIN ya viene lleno.",
     "ID_UF": "Id de la unidad fiscalizable (EQUIV: IDUF, ID_UF, IDUF_SIG). IDUF_SIG también se persiste en su columna.",
     "IDUF_SIG": "Código SIG de la unidad fiscalizable (UF#######). Copia directa del RData. En BD es distinto de ID_UF (SUR#######).",
     "RECOM_ACCION": "Recomendación de acción / medidas (EQUIV: RECOM_INAPS, RECOM_MA, RECOM_MEDIDAS).",
@@ -289,7 +293,7 @@ def _oracle_col_line(name: str, ora: str) -> str:
         return f"  {name} DATE"
     if ora == "NUMBER":
         return f"  {name} NUMBER"
-    if name in {"PK_OFICINA", "IDUF_SIG"}:
+    if name in _SHORT_VARCHAR:
         return f"  {name} VARCHAR2(20)"
     if name in _WIDE_2000:
         return f"  {name} VARCHAR2(2000)"
@@ -343,7 +347,7 @@ def _mysql_col_type(name: str, ora: str) -> str:
         return "DATETIME"
     if ora == "NUMBER":
         return "DOUBLE"
-    if name in {"PK_OFICINA", "IDUF_SIG"}:
+    if name in _SHORT_VARCHAR:
         return "VARCHAR(20)"
     return "TEXT"
 

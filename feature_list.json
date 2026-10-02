@@ -76,6 +76,13 @@
       "status": "done",
       "criterio": "map conserva ID_UF (coalesce) y copia IDUF_SIG. ensure agrega la columna en RDATA Oracle y MySQL DW. FORM sin la columna. CSEP no se altera. init.sh no la cubre",
       "doc": "progress/impl_fase-10-iduf-sig.md"
+    },
+    {
+      "id": "fase-11-idadministrado",
+      "title": "IDADMINISTRADO en DW_INF_CONSOL_RDATA",
+      "status": "done",
+      "criterio": "map conserva ID_ADMINISTRADO (coalesce) y copia IDADMINISTRADO. ensure agrega la columna en RDATA Oracle y MySQL DW. FORM sin la columna. CSEP no se altera. init.sh no la cubre",
+      "doc": "progress/impl_fase-11-idadministrado.md"
     }
   ]
 }

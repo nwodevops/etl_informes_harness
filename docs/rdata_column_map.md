@@ -41,6 +41,7 @@ Presentes en ambos esquemas actuales (nombres directos):
 | Canónica | Fuentes (orden) |
 |---|---|
 | `ID_ADMINISTRADO` | `IDADMIN`, `IDAMIN`, `ID_ADMIN`, `IDADMINISTRADO` |
+| `IDADMINISTRADO` | copia directa (no coalesce). Sigue siendo la cuarta fuente de `ID_ADMINISTRADO`. Puede diferir cuando `IDAMIN` ya viene lleno. |
 | `ID_UF` | `IDUF`, `ID_UF`, `IDUF_SIG` |
 | `IDUF_SIG` | copia directa (no coalesce). Sigue siendo la tercera fuente de `ID_UF`. En BD el código `UF…` es distinto del `SUR…` de `ID_UF`. |
 | `ADMIN` | `ADMIN`, `ADMINISTRADO_INAPS`, `TXADMINISTRADO_ADM` |
