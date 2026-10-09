@@ -1,6 +1,7 @@
 # Mapa de columnas RData → DW_INF_CONSOL_RDATA
 
 Destino lógico: `APP.DW_INF_CONSOL_RDATA` (DW / `oracle_dw`).  
+Tabla sede vs OD: [`equivalencias_sede_od.md`](equivalencias_sede_od.md).  
 FQN Oracle: `APP.DW_INF_CONSOL_RDATA` (conexión `oracle_dw` / user `app`).
 
 ## Estructura gradual (prioridad 2025/2026)

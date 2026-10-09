@@ -123,6 +123,7 @@ def cargar_indice(root: Path) -> _Indice:
 
 def aplicar_pk_oficina(df: pd.DataFrame, root: Path) -> pd.DataFrame:
     """Llena PK_OFICINA desde TXCOORDINACION. Sin match deja NULL y lo registra."""
+    # TODO /step 10 — cruzar TXCOORDINACION contra T_SEP_OFICINA y sus alias normalizados.
     if "TXCOORDINACION" not in df.columns:
         print("PK_OFICINA: sin columna TXCOORDINACION; no se cruza", flush=True)
         return df

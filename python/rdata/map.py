@@ -30,7 +30,8 @@ DIRECT_COLS = (
 ) - {"TIPO_OD", "RECOMENDACION_MEDIDAS_ADMIN"}  # solo vía EQUIV
 # Claves de EQUIV se saltan en el bucle directo; IDUF_SIG e IDADMINISTRADO se copian.
 
-# coalesce: primer no nulo gana (orden = prioridad)
+# TODO /step 4 — nombres distintos, un solo campo. Primer valor lleno gana.
+# Tabla: docs/equivalencias_sede_od.md
 EQUIV: dict[str, list[str]] = {
     "ID_ADMINISTRADO": ["IDADMIN", "IDAMIN", "ID_ADMIN", "IDADMINISTRADO"],
     "ID_UF": ["IDUF", "ID_UF", "IDUF_SIG"],
@@ -148,6 +149,7 @@ def map_to_canonical(
     mes_corte: str | None = None,
 ) -> pd.DataFrame:
     """Adapter staging: data.frame R → forma canónica STG (sin QA de negocio)."""
+    # TODO /step 2 — unificar el nombre (espacio → _). SEDE y OD quedan comparables.
     raw = normalize_frame_columns(df)
     n = len(raw)
     data: dict[str, Any] = {
@@ -158,6 +160,9 @@ def map_to_canonical(
         "OBJETO_R": [objeto_r] * n,
     }
 
+    # TODO /step 3 — mismo nombre en SEDE y OD: copia directa.
+    # Si la columna no está en ese archivo, queda vacía (solo sede o solo OD).
+    # TODO /step 3 — IDUF_SIG e IDADMINISTRADO no son clave de EQUIV: también se copian aquí.
     for col in DIRECT_COLS:
         if col in EQUIV:
             continue
@@ -166,6 +171,7 @@ def map_to_canonical(
         else:
             data[col] = pd.Series([pd.NA] * n)
 
+    # TODO /step 4 — aplicar la tabla EQUIV (SEDE y OD al campo único).
     for canon, sources in EQUIV.items():
         data[canon] = _coalesce_series(raw, sources, n)
 

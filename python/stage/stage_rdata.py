@@ -142,6 +142,7 @@ def _insert_h2(conn, table: str, df: pd.DataFrame) -> int:
 
 
 def load_all_mapped(rdata_dir: Path, pattern: str = "*.RData") -> pd.DataFrame:
+    # TODO /step 1 — leer cada RData y conservar su procedencia (BD/OD, año, mes y archivo).
     files = sorted(rdata_dir.glob(pattern))
     if not files:
         raise FileNotFoundError(f"Sin {pattern} en {rdata_dir}")
@@ -162,6 +163,8 @@ def load_all_mapped(rdata_dir: Path, pattern: str = "*.RData") -> pd.DataFrame:
         )
         print(f"  -> {len(mapped)} filas, objeto={obj}", flush=True)
         frames.append(mapped)
+
+    # TODO /step 5 — unir verticalmente las filas ya homologadas; no es un JOIN BD contra OD.
     out = pd.concat(frames, ignore_index=True)
     return out[CANONICAL_NAMES]
 
@@ -194,6 +197,7 @@ def main(argv: list[str] | None = None) -> int:
 
     conn = connect_h2(root, variables)
     try:
+        # TODO /step 6 — dejar el consolidado canónico en H2 como staging efímero.
         n = _insert_h2(conn, stg, df)
         print(f"H2 {stg}: {n} filas insertadas", flush=True)
     finally:

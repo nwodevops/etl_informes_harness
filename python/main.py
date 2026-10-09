@@ -46,6 +46,7 @@ def main() -> int:
     root = project_root()
     variables = load_vars(root)
 
+    # TODO /step 11 — leer desde H2 el consolidado canónico y ejecutar la lógica aislada.
     leer = _load("leer_h2", HERE / "io" / "leer_h2.py")
     datos = leer.leer_h2(root, variables)
     if not datos:
@@ -79,6 +80,7 @@ def main() -> int:
     for nombre, df in salidas.items():
         print(f"Salida {nombre}: {len(df)} filas x {len(df.columns)} columnas")
 
+    # TODO /step 12 — completar PK_OFICINA y cargar el resultado con full refresh en ambos DW.
     from rdata.oficina import aplicar_pk_oficina  # noqa: E402
 
     aplicar_pk_oficina(salidas[SALIDA_DF], root)
