@@ -5,6 +5,7 @@ Fuente paralela a RData. Carga canónica vía **Hop** (`pl_form_informes.hpl`), 
 | Archivo | Contenido |
 |---|---|
 | [`vw_inf_consol_simil.sql`](vw_inf_consol_simil.sql) | SELECT canónico + `FECHA_CARGA=NOW()` (grano = hecho; `FUENTE` BD\|OD) — embebido en el pipeline |
+| [`create_vw_inf_consol_simil.sql`](create_vw_inf_consol_simil.sql) | `CREATE OR REPLACE VIEW vw_inf_consol_simil` con ese mismo SELECT (ejecutar en `gappsdb`, MySQL 8+; depende de `DW_INF_CSEP_INFORMES_VIEW`) |
 | [`mapa_mysql_vs_rdata.md`](mapa_mysql_vs_rdata.md) | ER, OD/SEDE, mapeo y huecos |
 
 ## Pipeline
