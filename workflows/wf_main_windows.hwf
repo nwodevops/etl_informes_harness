@@ -54,7 +54,7 @@
       <set_logfile>N</set_logfile>
       <wait_until_finished>Y</wait_until_finished>
       <parallel>N</parallel>
-      <xloc>256</xloc>
+      <xloc>464</xloc>
       <yloc>192</yloc>
       <attributes_hac/>
     </action>
@@ -82,7 +82,7 @@
       <set_logfile>N</set_logfile>
       <wait_until_finished>Y</wait_until_finished>
       <parallel>N</parallel>
-      <xloc>464</xloc>
+      <xloc>256</xloc>
       <yloc>192</yloc>
       <attributes_hac/>
     </action>
@@ -100,20 +100,20 @@
   <hops>
     <hop>
       <from>Start</from>
-      <to>pl_form_informes</to>
+      <to>pl_csep_informes</to>
       <evaluation>Y</evaluation>
       <unconditional>Y</unconditional>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>pl_form_informes</from>
-      <to>pl_csep_informes</to>
+      <from>pl_csep_informes</from>
+      <to>pl_form_informes</to>
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>pl_csep_informes</from>
+      <from>pl_form_informes</from>
       <to>Success</to>
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>

@@ -13,8 +13,6 @@ import json
 import re
 from pathlib import Path
 
-import yaml
-
 # Sustituye ${VAR} en inputs.yaml / strings de conexión
 VAR_RE = re.compile(r"\$\{([A-Za-z0-9_]+)\}")
 
@@ -107,6 +105,8 @@ def require_live_conn(connection: str, variables: dict[str, str]) -> dict[str, s
 
 def load_sources(root: Path, variables: dict[str, str]) -> list[dict]:
     """Lee inputs.yaml (manifiesto de fuentes STG) resolviendo ${VAR}."""
+    import yaml
+
     path = root / "inputs.yaml"
     if not path.is_file():
         raise FileNotFoundError(

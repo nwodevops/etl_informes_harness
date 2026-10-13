@@ -63,8 +63,8 @@ if [ ! -f project-config.json ]; then
   ./switch-env.sh local
 fi
 
-run_hop_pipeline "pipelines/pl_form_informes.hpl"
 run_hop_pipeline "pipelines/pl_csep_informes.hpl"
+run_hop_pipeline "pipelines/pl_form_informes.hpl"
 
 step "FORM PK_OFICINA en mysql_dw"
 "$PY" python/check_form_pk.py

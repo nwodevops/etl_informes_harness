@@ -20,6 +20,7 @@ if not exist "%PY%" set "PY=python"
 
 set "HOP_RUN="
 if defined HOP_HOME if exist "%HOP_HOME%\hop-run.bat" set "HOP_RUN=%HOP_HOME%\hop-run.bat"
+if "%HOP_RUN%"=="" if exist "D:\Eder\hop\hop-run.bat" set "HOP_RUN=D:\Eder\hop\hop-run.bat"
 if "%HOP_RUN%"=="" if exist "%USERPROFILE%\apps\hop\hop-run.bat" set "HOP_RUN=%USERPROFILE%\apps\hop\hop-run.bat"
 if "%HOP_RUN%"=="" (
   echo FAIL: hop-run.bat no encontrado ^(HOP_HOME o %%USERPROFILE%%\apps\hop^)
@@ -49,17 +50,17 @@ if not exist "%~dp0project-config.json" (
   )
 )
 
-echo ==^> hop-run pl_form_informes.hpl
-call "%HOP_RUN%" -j %HOP_PROJECT% -r %HOP_RUNCONFIG% -f "%~dp0pipelines\pl_form_informes.hpl" -l Basic
-if errorlevel 1 (
-  echo FAIL: hop-run pl_form_informes.hpl
-  exit /b 1
-)
-
 echo ==^> hop-run pl_csep_informes.hpl
 call "%HOP_RUN%" -j %HOP_PROJECT% -r %HOP_RUNCONFIG% -f "%~dp0pipelines\pl_csep_informes.hpl" -l Basic
 if errorlevel 1 (
   echo FAIL: hop-run pl_csep_informes.hpl
+  exit /b 1
+)
+
+echo ==^> hop-run pl_form_informes.hpl
+call "%HOP_RUN%" -j %HOP_PROJECT% -r %HOP_RUNCONFIG% -f "%~dp0pipelines\pl_form_informes.hpl" -l Basic
+if errorlevel 1 (
+  echo FAIL: hop-run pl_form_informes.hpl
   exit /b 1
 )
 
