@@ -5,12 +5,15 @@ Rama `feature/mysql-dw-mirror`.
 - CTE `csep` sobre `DW_INF_CSEP_INFORMES_VIEW` deduplicado 1:1 por `TRIM(TXINFORME), TRIM(TXCUC)` (`ROW_NUMBER()` priorizando filas con datos poblados y mayor `IDACTIVIDAD`).
 - `LEFT JOIN csep ON csep.TXINFORME_KEY = TRIM(i.TX_NUMINFORME) AND csep.TXCUC_KEY = TRIM(med.TX_CUC) AND csep.rn = 1` (llave compuesta informe + CUC).
 - Riesgo: si el informe no tiene `NU_IDMEDIDA` (sin fila en `T_MVC_INFORMACIONMEDIDAS_MED`), `med.TX_CUC` es NULL y el join no cruza (6 campos en NULL).
-- Los 6 campos en `DW_INF_CONSOL_FORM` provienen directamente de `csep`:
+- Campos en `DW_INF_CONSOL_FORM` que provienen directamente de `csep`:
   - `TX_DOCUMENTO_PREVIO`
   - `TX_NUMERO_DOCUMENTO_PREVIO`
   - `FE_DOCUMENTO_PREVIO`
   - `FE_REGISTRO_DOCUMENTO_PREVIO`
   - `TX_OTRO_DOCUMENTO_PREVIO`
   - `FE_DERIV_DOC_DERIVACION`
-- Aplicado en paridad sobre `input/input_mysql/vw_inf_consol_simil.sql` y `pipelines/pl_form_informes.hpl`. Eliminado `create_vw_inf_consol_simil.sql` (DDL de vista en fuente: deprecated, nada lo ejecutaba).
+  - `ESTADO` ← `csep.TXESTADO` (reemplaza el mapeo `i.FG_ESTADO` → ACTIVO/INACTIVO; dominio pasa a estados de flujo CSEP)
+  - `ANALISTA_LEGAL` ← `csep.TXNOMBRE_ANAL_LEGAL` (antes marcador `'--'`)
+  - `RESPONSABLE_COMISION` ← `csep.TXNOMBRE_RESP_COMISION` (antes marcador `'--'`)
+- Aplicado en paridad sobre `input/input_mysql/vw_inf_consol_simil.sql`, `input/input_mysql/create_vw_inf_consol_simil.sql` y `pipelines/pl_form_informes.hpl`.
 - Orden invertido en `workflows/wf_main.hwf`, `workflows/wf_main_windows.hwf`, `init.sh` e `init.bat`: `pl_csep_informes` se ejecuta antes de `pl_form_informes`.
