@@ -2,8 +2,9 @@
 
 Rama `feature/mysql-dw-mirror`.
 
-- CTE `csep` sobre `DW_INF_CSEP_INFORMES_VIEW` deduplicado 1:1 por `TRIM(TXINFORME)` (`ROW_NUMBER()` priorizando filas con datos poblados y mayor `IDACTIVIDAD`).
-- `LEFT JOIN csep ON csep.TXINFORME_KEY = TRIM(i.TX_NUMINFORME) AND csep.rn = 1`.
+- CTE `csep` sobre `DW_INF_CSEP_INFORMES_VIEW` deduplicado 1:1 por `TRIM(TXINFORME), TRIM(TXCUC)` (`ROW_NUMBER()` priorizando filas con datos poblados y mayor `IDACTIVIDAD`).
+- `LEFT JOIN csep ON csep.TXINFORME_KEY = TRIM(i.TX_NUMINFORME) AND csep.TXCUC_KEY = TRIM(med.TX_CUC) AND csep.rn = 1` (llave compuesta informe + CUC).
+- Riesgo: si el informe no tiene `NU_IDMEDIDA` (sin fila en `T_MVC_INFORMACIONMEDIDAS_MED`), `med.TX_CUC` es NULL y el join no cruza (6 campos en NULL).
 - Los 6 campos en `DW_INF_CONSOL_FORM` provienen directamente de `csep`:
   - `TX_DOCUMENTO_PREVIO`
   - `TX_NUMERO_DOCUMENTO_PREVIO`
