@@ -53,7 +53,7 @@ Presentes en ambos esquemas actuales (nombres directos):
 | `TIPOACCION_INAPS` | `TIPOACCION_INAPS`, `TXACCION` |
 | `TIPOSUP_INAPS` | `TIPOSUP_INAPS`, `TXTIPSUP` |
 | `EXPEDIENTE` | `EXPEDIENTE`, `TXNUMEXP` |
-| `RECOMENDACION_MEDIDAS_ADMIN` | `RECOM_MA`, `RECOMENDACIÓN_MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA`. Mismo orden en sede y OD. `RECOM_MA` también alimenta `RECOM_ACCION`. En FORM no se copia este texto: vale `SI` o `NO` según `NU_IDMEDIDA` del hecho |
+| `RECOMENDACION_MEDIDAS_ADMIN` | `RECOM_MA`, `RECOMENDACIÓN_MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA`. Mismo orden en sede y OD. `RECOM_MA` también alimenta `RECOM_ACCION`. En FORM no se copia este texto: vale `SI` o `NO` según si el CUC del informe cruza con `T_MVC_INFORMACIONMEDIDAS_MED` |
 
 ## EXTRAS_BD (prioridad consumo BD reciente)
 
