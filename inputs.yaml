@@ -1,0 +1,9 @@
+# Manifiesto de fuentes STG (H2).
+# RData: DDL canónico vía python/introspect/rdata.py; filas vía python/stage/stage_rdata.py.
+# FORM (MySQL) y CSEP (SISUD) no usan H2: pipelines Hop pl_form_informes / pl_csep_informes.
+
+sources:
+  - stg_table: STG_INF_CONSOL
+    type: rdata
+    path: input/input_rdata
+    glob: "*.RData"

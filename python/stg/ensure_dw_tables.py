@@ -1,0 +1,553 @@
+#!/usr/bin/env python3
+"""Asegura tablas DW en oracle_dw y mysql_dw (CREATE si no existen; sin DROP TABLE).
+
+Sí hace DROP COLUMN de OD, CATEG, COMPET, TIPO_OD e IDADMINISTRADO si la tabla ya las tiene.
+
+Lo llama wf_create_stg (diseño) antes de mapear / de la primera corrida.
+Runtime (wf_main) solo TRUNCATE+INSERT.
+
+  DW_INF_CONSOL_RDATA — DDL canónico
+  DW_INF_CONSOL_FORM — canónico + FECHA_CARGA (CREATE o ALTER ADD)
+  DW_INF_CSEP_INFORMES_VIEW — columnas de CSEP_INFORMES_VIEW (oracle_sisud)
+
+Destinos: oracle_dw (Oracle) + mysql_dw (MySQL mirror; ≠ fuente HEC mysql).
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+_PY = Path(__file__).resolve().parents[1]
+if str(_PY) not in sys.path:
+    sys.path.insert(0, str(_PY))
+
+from core.config import load_vars, project_root, require_live_conn  # noqa: E402
+from rdata.schema import (  # noqa: E402
+    COLUMN_COMMENTS,
+    FECHA_CARGA_COMMENT,
+    mysql_ddl,
+    mysql_ddl_form,
+    mysql_type_from_oracle_meta,
+    oracle_comment_statements,
+    oracle_comment_statements_form,
+    oracle_ddl,
+    oracle_ddl_form,
+)
+
+ESQUEMA = "APP"
+TABLE_RDATA = "DW_INF_CONSOL_RDATA"
+TABLE_FORM = "DW_INF_CONSOL_FORM"
+TABLE_CSEP = "DW_INF_CSEP_INFORMES_VIEW"
+_RETIRED_COLS = ("OD", "CATEG", "COMPET", "TIPO_OD", "IDADMINISTRADO")
+SRC_VIEW = "CSEP_INFORMES_VIEW"
+
+
+def _connect(connection: str, variables: dict[str, str]):
+    try:
+        import oracledb
+    except ImportError as exc:
+        raise SystemExit(
+            "Falta oracledb. Instala: pip install -r python/requirements.txt"
+        ) from exc
+    try:
+        oracledb.init_oracle_client()
+    except Exception:
+        pass
+    cv = require_live_conn(connection, variables)
+    port = int(cv["port"]) if str(cv["port"]).isdigit() else 1521
+    conn = oracledb.connect(
+        user=cv["username"],
+        password=cv["password"],
+        host=cv["host"],
+        port=port,
+        service_name=cv["database"],
+    )
+    return conn, cv
+
+
+def _connect_mysql(variables: dict[str, str]):
+    try:
+        import pymysql
+    except ImportError as exc:
+        raise SystemExit(
+            "Falta pymysql. Instala: pip install -r python/requirements.txt"
+        ) from exc
+    cv = require_live_conn("mysql_dw", variables)
+    port = int(cv["port"]) if str(cv["port"]).isdigit() else 3306
+    conn = pymysql.connect(
+        host=cv["host"],
+        port=port,
+        user=cv["username"],
+        password=cv["password"],
+        database=cv["database"],
+        charset="utf8mb4",
+        autocommit=False,
+    )
+    return conn, cv
+
+
+def _table_exists(cur, table: str) -> bool:
+    cur.execute(
+        "SELECT COUNT(*) FROM user_tables WHERE table_name = :1",
+        [table.upper()],
+    )
+    return int(cur.fetchone()[0]) > 0
+
+
+def _mysql_table_exists(cur, table: str) -> bool:
+    cur.execute(
+        """
+        SELECT COUNT(*) FROM information_schema.tables
+        WHERE table_schema = DATABASE() AND table_name = %s
+        """,
+        (table,),
+    )
+    return int(cur.fetchone()[0]) > 0
+
+
+def _mysql_column_exists(cur, table: str, column: str) -> bool:
+    cur.execute(
+        """
+        SELECT COUNT(*) FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = %s AND column_name = %s
+        """,
+        (table, column),
+    )
+    return int(cur.fetchone()[0]) > 0
+
+
+def _user_tablespace(cur) -> str:
+    cur.execute(
+        """
+        SELECT tablespace_name FROM user_ts_quotas
+        WHERE max_bytes = -1 OR bytes > 0
+        ORDER BY CASE WHEN tablespace_name = 'USERS' THEN 0 ELSE 1 END, tablespace_name
+        """
+    )
+    rows = [r[0] for r in cur.fetchall()]
+    return rows[0] if rows else "USERS"
+
+
+def _ensure_canonical(cur, schema: str, table: str, ts: str) -> str:
+    if not _table_exists(cur, table):
+        ddl = oracle_ddl(schema, table).rstrip() + f" TABLESPACE {ts}"
+        cur.execute(ddl)
+        for stmt in oracle_comment_statements(schema, table):
+            cur.execute(stmt)
+        return "created"
+    added = _oracle_add_pk(cur, schema, table)
+    added.extend(_oracle_add_iduf_sig(cur, schema, table))
+    added.extend(_oracle_drop_retired(cur, schema, table))
+    return f"altered:{','.join(added)}" if added else "exists"
+
+
+def _column_exists(cur, table: str, column: str) -> bool:
+    cur.execute(
+        """
+        SELECT COUNT(*) FROM user_tab_columns
+        WHERE table_name = :1 AND column_name = :2
+        """,
+        [table.upper(), column.upper()],
+    )
+    return int(cur.fetchone()[0]) > 0
+
+
+def _oracle_add_pk(cur, schema: str, table: str) -> list[str]:
+    if _column_exists(cur, table, "PK_OFICINA"):
+        return []
+    cur.execute(f"ALTER TABLE {schema}.{table} ADD PK_OFICINA VARCHAR2(20)")
+    cur.execute(
+        f"COMMENT ON COLUMN {schema}.{table}.PK_OFICINA IS "
+        "'Código de oficina T_SEP_OFICINA.PK_OFICINA (COR###).'"
+    )
+    return ["PK_OFICINA"]
+
+
+def _oracle_add_iduf_sig(cur, schema: str, table: str) -> list[str]:
+    """Solo DW_INF_CONSOL_RDATA. No llamar desde FORM."""
+    if _column_exists(cur, table, "IDUF_SIG"):
+        return []
+    cmt = COLUMN_COMMENTS["IDUF_SIG"].replace("'", "''")
+    cur.execute(f"ALTER TABLE {schema}.{table} ADD IDUF_SIG VARCHAR2(20)")
+    cur.execute(f"COMMENT ON COLUMN {schema}.{table}.IDUF_SIG IS '{cmt}'")
+    return ["IDUF_SIG"]
+
+
+def _oracle_drop_retired(cur, schema: str, table: str) -> list[str]:
+    dropped: list[str] = []
+    for col in _RETIRED_COLS:
+        if not _column_exists(cur, table, col):
+            continue
+        cur.execute(f"ALTER TABLE {schema}.{table} DROP COLUMN {col}")
+        dropped.append(f"drop:{col}")
+    return dropped
+
+
+def _ensure_form(cur, schema: str, ts: str) -> str:
+    """CREATE FORM con FECHA_CARGA y PK_OFICINA, o ALTER ADD si faltan."""
+    table = TABLE_FORM
+    if not _table_exists(cur, table):
+        ddl = oracle_ddl_form(schema, table).rstrip() + f" TABLESPACE {ts}"
+        cur.execute(ddl)
+        for stmt in oracle_comment_statements_form(schema, table):
+            cur.execute(stmt)
+        return "created"
+    added: list[str] = []
+    if not _column_exists(cur, table, "FECHA_CARGA"):
+        cur.execute(f"ALTER TABLE {schema}.{table} ADD FECHA_CARGA DATE")
+        cur.execute(
+            f"COMMENT ON COLUMN {schema}.{table}.FECHA_CARGA IS "
+            f"'{FECHA_CARGA_COMMENT.replace(chr(39), chr(39)+chr(39))}'"
+        )
+        added.append("FECHA_CARGA")
+    added.extend(_oracle_add_pk(cur, schema, table))
+    added.extend(_oracle_drop_retired(cur, schema, table))
+    return f"altered:{','.join(added)}" if added else "exists"
+
+
+def _ora_col_type(
+    data_type: str,
+    data_length,
+    data_precision,
+    data_scale,
+    char_length,
+) -> str:
+    dt = (data_type or "").upper()
+    if dt in ("VARCHAR2", "NVARCHAR2", "CHAR", "NCHAR"):
+        n = int(char_length or data_length or 4000)
+        return f"{dt}({n})"
+    if dt == "NUMBER":
+        if data_precision is None:
+            return "NUMBER"
+        p = int(data_precision)
+        if data_scale is None:
+            return f"NUMBER({p})"
+        s = int(data_scale)
+        if s == 0:
+            return f"NUMBER({p})"
+        return f"NUMBER({p},{s})"
+    if dt in ("FLOAT", "BINARY_FLOAT", "BINARY_DOUBLE"):
+        return dt
+    if dt == "DATE":
+        return "DATE"
+    if dt.startswith("TIMESTAMP"):
+        return data_type
+    if dt in ("CLOB", "NCLOB", "BLOB", "XMLTYPE", "LONG", "RAW"):
+        if dt == "RAW" and data_length:
+            return f"RAW({int(data_length)})"
+        return dt
+    if data_length:
+        return f"VARCHAR2({min(int(data_length), 4000)})"
+    return "VARCHAR2(4000)"
+
+
+def _fetch_view_columns(cur, view_name: str) -> list[tuple]:
+    cur.execute(
+        """
+        SELECT OWNER, COLUMN_NAME, DATA_TYPE, DATA_LENGTH,
+               DATA_PRECISION, DATA_SCALE, CHAR_LENGTH, NULLABLE, COLUMN_ID
+        FROM ALL_TAB_COLUMNS
+        WHERE TABLE_NAME = :tname
+          AND OWNER IN (USER, 'SISUD', 'CSEPDV')
+        ORDER BY
+          CASE OWNER
+            WHEN USER THEN 0
+            WHEN 'SISUD' THEN 1
+            ELSE 2
+          END,
+          COLUMN_ID
+        """,
+        {"tname": view_name.upper()},
+    )
+    rows = cur.fetchall()
+    if not rows:
+        raise ValueError(
+            f"No se hallaron columnas de {view_name} "
+            f"(¿grant / synonym para el usuario fuente?)"
+        )
+    owner0 = rows[0][0]
+    return [r for r in rows if r[0] == owner0]
+
+
+def _build_csep_ddl(cols: list[tuple], table: str, ts: str) -> str:
+    parts: list[str] = []
+    for (
+        _owner,
+        name,
+        data_type,
+        data_length,
+        data_precision,
+        data_scale,
+        char_length,
+        nullable,
+        _cid,
+    ) in cols:
+        typ = _ora_col_type(
+            str(data_type), data_length, data_precision, data_scale, char_length
+        )
+        null_sql = "" if (nullable or "Y") == "Y" else " NOT NULL"
+        parts.append(f'  "{name}" {typ}{null_sql}')
+    body = ",\n".join(parts)
+    return f"CREATE TABLE {table} (\n{body}\n) TABLESPACE {ts}"
+
+
+def _build_csep_mysql_ddl(cols: list[tuple], table: str) -> str:
+    parts: list[str] = []
+    for (
+        _owner,
+        name,
+        data_type,
+        data_length,
+        data_precision,
+        data_scale,
+        char_length,
+        nullable,
+        _cid,
+    ) in cols:
+        typ = mysql_type_from_oracle_meta(
+            str(data_type), data_length, data_precision, data_scale, char_length
+        )
+        null_sql = "" if (nullable or "Y") == "Y" else " NOT NULL"
+        parts.append(f"  `{name}` {typ}{null_sql}")
+    body = ",\n".join(parts)
+    return (
+        f"CREATE TABLE IF NOT EXISTS `{table}` (\n{body}\n) "
+        f"ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+    )
+
+
+def _ensure_csep(variables: dict[str, str]) -> str:
+    dst, dst_cv = _connect("oracle_dw", variables)
+    try:
+        cur = dst.cursor()
+        if _table_exists(cur, TABLE_CSEP):
+            cur.close()
+            return "exists"
+        ts = _user_tablespace(cur)
+        src, src_cv = _connect("oracle_sisud", variables)
+        try:
+            scur = src.cursor()
+            cols = _fetch_view_columns(scur, SRC_VIEW)
+            scur.close()
+        finally:
+            src.close()
+        ddl = _build_csep_ddl(cols, TABLE_CSEP, ts)
+        cur.execute(ddl)
+        dst.commit()
+        print(
+            f"DW: CREATE {TABLE_CSEP} ({len(cols)} cols desde {SRC_VIEW}) "
+            f"@ {dst_cv['host']}:{dst_cv['port']}/{dst_cv['database']}",
+            flush=True,
+        )
+        cur.close()
+        return "created"
+    finally:
+        dst.close()
+
+
+def _fetch_csep_cols(variables: dict[str, str]) -> list[tuple]:
+    src, _cv = _connect("oracle_sisud", variables)
+    try:
+        scur = src.cursor()
+        cols = _fetch_view_columns(scur, SRC_VIEW)
+        scur.close()
+        return cols
+    finally:
+        src.close()
+
+
+def _mysql_add_pk(cur, table: str) -> list[str]:
+    if _mysql_column_exists(cur, table, "PK_OFICINA"):
+        return []
+    cur.execute(
+        f"ALTER TABLE `{table}` ADD COLUMN `PK_OFICINA` VARCHAR(20) NULL "
+        f"COMMENT 'Código de oficina T_SEP_OFICINA.PK_OFICINA (COR###).'"
+    )
+    return ["PK_OFICINA"]
+
+
+def _mysql_add_iduf_sig(cur, table: str) -> list[str]:
+    """Solo DW_INF_CONSOL_RDATA. No llamar desde FORM."""
+    if _mysql_column_exists(cur, table, "IDUF_SIG"):
+        return []
+    cmt = COLUMN_COMMENTS["IDUF_SIG"].replace("\\", "\\\\").replace("'", "''")
+    cur.execute(
+        f"ALTER TABLE `{table}` ADD COLUMN `IDUF_SIG` VARCHAR(20) NULL "
+        f"COMMENT '{cmt}'"
+    )
+    return ["IDUF_SIG"]
+
+
+def _mysql_drop_retired(cur, table: str) -> list[str]:
+    dropped: list[str] = []
+    for col in _RETIRED_COLS:
+        if not _mysql_column_exists(cur, table, col):
+            continue
+        cur.execute(f"ALTER TABLE `{table}` DROP COLUMN `{col}`")
+        dropped.append(f"drop:{col}")
+    return dropped
+
+
+def _ensure_mysql_rdata(cur) -> str:
+    if not _mysql_table_exists(cur, TABLE_RDATA):
+        cur.execute(mysql_ddl(TABLE_RDATA))
+        return "created"
+    added = _mysql_add_pk(cur, TABLE_RDATA)
+    added.extend(_mysql_add_iduf_sig(cur, TABLE_RDATA))
+    added.extend(_mysql_drop_retired(cur, TABLE_RDATA))
+    return f"altered:{','.join(added)}" if added else "exists"
+
+
+def _ensure_mysql_form(cur) -> str:
+    if not _mysql_table_exists(cur, TABLE_FORM):
+        cur.execute(mysql_ddl_form(TABLE_FORM))
+        return "created"
+    added: list[str] = []
+    if not _mysql_column_exists(cur, TABLE_FORM, "FECHA_CARGA"):
+        cmt = FECHA_CARGA_COMMENT.replace("\\", "\\\\").replace("'", "''")
+        cur.execute(
+            f"ALTER TABLE `{TABLE_FORM}` ADD COLUMN `FECHA_CARGA` DATETIME NULL "
+            f"COMMENT '{cmt}'"
+        )
+        added.append("FECHA_CARGA")
+    added.extend(_mysql_add_pk(cur, TABLE_FORM))
+    added.extend(_mysql_drop_retired(cur, TABLE_FORM))
+    return f"altered:{','.join(added)}" if added else "exists"
+
+
+def _ensure_mysql_csep(cur, variables: dict[str, str]) -> str:
+    if _mysql_table_exists(cur, TABLE_CSEP):
+        return "exists"
+    cols = _fetch_csep_cols(variables)
+    cur.execute(_build_csep_mysql_ddl(cols, TABLE_CSEP))
+    return f"created:{len(cols)}"
+
+
+def _ensure_mysql_all(variables: dict[str, str]) -> None:
+    conn, cv = _connect_mysql(variables)
+    try:
+        cur = conn.cursor()
+        for label, status in (
+            (TABLE_RDATA, _ensure_mysql_rdata(cur)),
+            (TABLE_FORM, _ensure_mysql_form(cur)),
+        ):
+            if status == "created":
+                conn.commit()
+                print(
+                    f"MySQL DW: CREATE {label} "
+                    f"@ {cv['host']}:{cv['port']}/{cv['database']}",
+                    flush=True,
+                )
+            elif status.startswith("altered"):
+                conn.commit()
+                cols = status.split(":", 1)[1]
+                print(f"MySQL DW: ALTER {label} ADD {cols}", flush=True)
+            else:
+                print(f"MySQL DW: {label} ya existe (ok)", flush=True)
+
+        status = _ensure_mysql_csep(cur, variables)
+        if status.startswith("created"):
+            conn.commit()
+            n = status.split(":", 1)[1]
+            print(
+                f"MySQL DW: CREATE {TABLE_CSEP} ({n} cols) "
+                f"@ {cv['host']}:{cv['port']}/{cv['database']}",
+                flush=True,
+            )
+        else:
+            print(f"MySQL DW: {TABLE_CSEP} ya existe (ok)", flush=True)
+        cur.close()
+    finally:
+        conn.close()
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="CREATE tablas DW en oracle_dw y mysql_dw si no existen (sin DROP)"
+    )
+    parser.add_argument("--root", default=None)
+    args = parser.parse_args(argv)
+
+    root = Path(args.root).resolve() if args.root else project_root()
+    variables = load_vars(root)
+
+    conn, cv = _connect("oracle_dw", variables)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT USER FROM DUAL")
+        schema = str(cur.fetchone()[0])
+        if schema.upper() != ESQUEMA:
+            print(f"DW: esquema sesión = {schema} (esperado {ESQUEMA})", flush=True)
+        ts = _user_tablespace(cur)
+        status = _ensure_canonical(cur, schema, TABLE_RDATA, ts)
+        if status == "created":
+            conn.commit()
+            print(
+                f"DW: CREATE {schema}.{TABLE_RDATA} "
+                f"@ {cv['host']}:{cv['port']}/{cv['database']}",
+                flush=True,
+            )
+        elif status.startswith("altered"):
+            conn.commit()
+            print(
+                f"DW: ALTER {schema}.{TABLE_RDATA} ADD {status.split(':', 1)[1]}",
+                flush=True,
+            )
+        else:
+            print(f"DW: {schema}.{TABLE_RDATA} ya existe (ok)", flush=True)
+
+        status = _ensure_form(cur, schema, ts)
+        if status == "created":
+            conn.commit()
+            print(
+                f"DW: CREATE {schema}.{TABLE_FORM} (+FECHA_CARGA) "
+                f"@ {cv['host']}:{cv['port']}/{cv['database']}",
+                flush=True,
+            )
+        elif status.startswith("altered"):
+            conn.commit()
+            print(
+                f"DW: ALTER {schema}.{TABLE_FORM} ADD {status.split(':', 1)[1]}",
+                flush=True,
+            )
+        else:
+            print(f"DW: {schema}.{TABLE_FORM} ya existe (ok)", flush=True)
+        cur.close()
+    finally:
+        conn.close()
+
+    try:
+        status = _ensure_csep(variables)
+        if status == "exists":
+            print(f"DW: {TABLE_CSEP} ya existe (ok)", flush=True)
+    except Exception as exc:
+        print(
+            f"ERROR: no se pudo asegurar {TABLE_CSEP} ({exc}). "
+            f"Revisa oracle_sisud / grants o crea manualmente sql/dw/03_*.sql",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        _ensure_mysql_all(variables)
+    except Exception as exc:
+        print(
+            f"ERROR: no se pudo asegurar tablas MySQL DW ({exc}). "
+            f"Revisa mysql_dw / DB_MYSQL_DW_* o sql/dw/mysql/",
+            file=sys.stderr,
+        )
+        return 1
+
+    print("DW: tablas destino listas (Oracle + MySQL; CREATE solo si faltaban).", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (FileNotFoundError, ValueError, KeyError, RuntimeError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        raise SystemExit(1)
