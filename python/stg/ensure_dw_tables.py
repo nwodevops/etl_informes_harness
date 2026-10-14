@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Asegura tablas DW en oracle_dw y mysql_dw (CREATE si no existen; nunca DROP).
+"""Asegura tablas DW en oracle_dw y mysql_dw (CREATE si no existen; sin DROP TABLE).
+
+Sí hace DROP COLUMN de OD, CATEG, COMPET y TIPO_OD si la tabla ya las tiene.
 
 Lo llama wf_create_stg (diseño) antes de mapear / de la primera corrida.
 Runtime (wf_main) solo TRUNCATE+INSERT.
@@ -38,6 +40,7 @@ ESQUEMA = "APP"
 TABLE_RDATA = "DW_INF_CONSOL_RDATA"
 TABLE_FORM = "DW_INF_CONSOL_FORM"
 TABLE_CSEP = "DW_INF_CSEP_INFORMES_VIEW"
+_RETIRED_COLS = ("OD", "CATEG", "COMPET", "TIPO_OD")
 SRC_VIEW = "CSEP_INFORMES_VIEW"
 
 
@@ -138,6 +141,7 @@ def _ensure_canonical(cur, schema: str, table: str, ts: str) -> str:
     added = _oracle_add_pk(cur, schema, table)
     added.extend(_oracle_add_iduf_sig(cur, schema, table))
     added.extend(_oracle_add_idadministrado(cur, schema, table))
+    added.extend(_oracle_drop_retired(cur, schema, table))
     return f"altered:{','.join(added)}" if added else "exists"
 
 
@@ -183,6 +187,16 @@ def _oracle_add_idadministrado(cur, schema: str, table: str) -> list[str]:
     return ["IDADMINISTRADO"]
 
 
+def _oracle_drop_retired(cur, schema: str, table: str) -> list[str]:
+    dropped: list[str] = []
+    for col in _RETIRED_COLS:
+        if not _column_exists(cur, table, col):
+            continue
+        cur.execute(f"ALTER TABLE {schema}.{table} DROP COLUMN {col}")
+        dropped.append(f"drop:{col}")
+    return dropped
+
+
 def _ensure_form(cur, schema: str, ts: str) -> str:
     """CREATE FORM con FECHA_CARGA y PK_OFICINA, o ALTER ADD si faltan."""
     table = TABLE_FORM
@@ -201,6 +215,7 @@ def _ensure_form(cur, schema: str, ts: str) -> str:
         )
         added.append("FECHA_CARGA")
     added.extend(_oracle_add_pk(cur, schema, table))
+    added.extend(_oracle_drop_retired(cur, schema, table))
     return f"altered:{','.join(added)}" if added else "exists"
 
 
@@ -389,6 +404,16 @@ def _mysql_add_idadministrado(cur, table: str) -> list[str]:
     return ["IDADMINISTRADO"]
 
 
+def _mysql_drop_retired(cur, table: str) -> list[str]:
+    dropped: list[str] = []
+    for col in _RETIRED_COLS:
+        if not _mysql_column_exists(cur, table, col):
+            continue
+        cur.execute(f"ALTER TABLE `{table}` DROP COLUMN `{col}`")
+        dropped.append(f"drop:{col}")
+    return dropped
+
+
 def _ensure_mysql_rdata(cur) -> str:
     if not _mysql_table_exists(cur, TABLE_RDATA):
         cur.execute(mysql_ddl(TABLE_RDATA))
@@ -396,6 +421,7 @@ def _ensure_mysql_rdata(cur) -> str:
     added = _mysql_add_pk(cur, TABLE_RDATA)
     added.extend(_mysql_add_iduf_sig(cur, TABLE_RDATA))
     added.extend(_mysql_add_idadministrado(cur, TABLE_RDATA))
+    added.extend(_mysql_drop_retired(cur, TABLE_RDATA))
     return f"altered:{','.join(added)}" if added else "exists"
 
 
@@ -412,6 +438,7 @@ def _ensure_mysql_form(cur) -> str:
         )
         added.append("FECHA_CARGA")
     added.extend(_mysql_add_pk(cur, TABLE_FORM))
+    added.extend(_mysql_drop_retired(cur, TABLE_FORM))
     return f"altered:{','.join(added)}" if added else "exists"
 
 

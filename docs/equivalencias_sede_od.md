@@ -36,7 +36,6 @@ Gana el primer valor que ya viene lleno, en el orden de la fila.
 | `TIPOACCION_INAPS` | `TIPOACCION_INAPS` | `TIPOACCION_INAPS`, `TXACCION` |
 | `TIPOSUP_INAPS` | `TIPOSUP_INAPS` | `TIPOSUP_INAPS`, `TXTIPSUP` |
 | `EXPEDIENTE` | `EXPEDIENTE` | `EXPEDIENTE`, `TXNUMEXP` |
-| `TIPO_OD` | — | `TIPO` |
 | `RECOMENDACION_MEDIDAS_ADMIN` | `RECOM_MA`, `RECOMENDACIÓN MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA` | `RECOM_MA`, `RECOMENDACIÓN MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA` |
 
 Dos códigos se guardan además tal como vienen, porque en sede no son el mismo valor que la columna unificada:
@@ -54,16 +53,11 @@ En filas OD quedan vacías.
 
 `DIREC`, `COORDINADOR`, `DIRECTOR`, `DOC_INICIO_ELA`, `FECHA_INICIO_ELA`, `PROVEIDO`, `FECHA_PROV`, `TIPO_INFRACCION`, `DAÑO_RIESGO_ASOCIADO`, `HUMANOS`, `AIRE`, `FLORA`, `FAUNA`, `AGUA`, `SUELO`, `TIPO_SUBSANACION`, `PRESUNTOS_INCUMPL`, `TOTAL_HECHOS`, `ACTA_TRANSF`, `FECHA_ACTA_TRASNF`, `RPS`, `FECHA_RPS`, `RES_ACTA_MEDIDA`, `FECHA_MEDIDA`, `ESTADO`, `ANALISTA_LEGAL`, `RESPONSABLE_COMISION`.
 
-## Solo OD
-
-En filas sede quedan vacías.
-
-`OD`, `CATEG`, `COMPET`, `TIPO_OD`.
-
 ## No entran a la tabla única
 
 | Columna fuente | Motivo |
 |---|---|
+| `OD`, `CATEG`, `COMPET`, `TIPO` | Ya no se publican (`TIPO` antes era `TIPO_OD`) |
 | `N°`, `USUARIO`, `FECHA_REGISTRO` | Dato de exportación, no del informe |
 | `INF_EVAL`, `FECHA_INF_EVAL` | Casi vacías en el corte vigente |
 | Columna fuente `ID_UF` (`SUR…`) | Ya no alimenta la columna publicada `ID_UF` |

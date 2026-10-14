@@ -20,7 +20,6 @@ from rdata.schema import (  # noqa: F401
     EXTRAS,
     EXTRAS_BD,
     EXTRAS_EQUIV,
-    EXTRAS_OD,
     EXTRAS_QA,
     FECHA_CARGA_COMMENT,
     NUMBER_COLS,

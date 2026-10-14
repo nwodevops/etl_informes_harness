@@ -108,13 +108,6 @@ EXTRAS_BD: list[tuple[str, str, str]] = [
     ("RESPONSABLE_COMISION", "VARCHAR", "VARCHAR2"),
 ]
 
-EXTRAS_OD: list[tuple[str, str, str]] = [
-    ("OD", "VARCHAR", "VARCHAR2"),
-    ("CATEG", "VARCHAR", "VARCHAR2"),
-    ("COMPET", "VARCHAR", "VARCHAR2"),
-    ("TIPO_OD", "VARCHAR", "VARCHAR2"),
-]
-
 EXTRAS_QA: list[tuple[str, str, str]] = [
     ("FG_SIN_INFORME", "BIGINT", "NUMBER"),
 ]
@@ -122,7 +115,6 @@ EXTRAS_QA: list[tuple[str, str, str]] = [
 EXTRAS: list[tuple[str, str, str]] = [
     *EXTRAS_EQUIV,
     *EXTRAS_BD,
-    *EXTRAS_OD,
     *EXTRAS_QA,
 ]
 
@@ -221,10 +213,6 @@ COLUMN_COMMENTS: dict[str, str] = {
     "ESTADO": "[BD] Estado del registro en el export vigente.",
     "ANALISTA_LEGAL": "[BD] Analista legal asignado.",
     "RESPONSABLE_COMISION": "[BD] Responsable de comisión.",
-    "OD": "[OD] Oficina desconcentrada.",
-    "CATEG": "[OD] Categoría.",
-    "COMPET": "[OD] Competencia.",
-    "TIPO_OD": "[OD] Tipo OD (fuente TIPO; no confundir con TIPO_INF).",
     "FG_SIN_INFORME": "QA ETL (logica/): 1 si INFORME vacío/nulo; 0 en caso contrario.",
 }
 
@@ -260,7 +248,6 @@ _WIDE_1000 = {
     "ADMIN",
     "COORDINADOR",
     "DIRECTOR",
-    "OD",
     "ADMINISTRADO_INAPS",
     "PROVEIDO",
     "NRO_DOC_CIERRE",

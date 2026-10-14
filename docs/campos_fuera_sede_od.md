@@ -4,7 +4,7 @@ Comparación de todos los `BDInf_*.RData` (sede) y `ODInf_*.RData` (OD) en `inpu
 
 Un campo entra si se copia con el mismo nombre o si está en la tabla de equivalencias. El resto queda fuera. La unión sede/OD está en [`equivalencias_sede_od.md`](equivalencias_sede_od.md).
 
-En agosto 2026, sede trae 83 columnas y OD 51. De esas, OD entra completa. Sede deja fuera las 5 de exportación y, además, el `SUR…` de `ID_UF` y el nombre largo de medidas administrativas.
+En agosto 2026, sede trae 83 columnas y OD 51. Sede deja fuera las 5 de exportación y, además, el `SUR…` de `ID_UF` y el nombre largo de medidas administrativas. De OD vigente ya no entran `OD`, `CATEG`, `COMPET` ni `TIPO`.
 
 ## Sede — siguen en 2025/2026 y no entran
 
@@ -20,7 +20,14 @@ En agosto 2026, sede trae 83 columnas y OD 51. De esas, OD entra completa. Sede 
 
 ## OD — corte 2025/2026
 
-Ningún campo del archivo vigente queda fuera. Los que se listan abajo no están en `ODInf` de 2025 ni de 2026.
+| Campo | Motivo |
+|---|---|
+| `OD` | Ya no se publica |
+| `CATEG` | Ya no se publica |
+| `COMPET` | Ya no se publica |
+| `TIPO` | Ya no se publica. Antes alimentaba `TIPO_OD` |
+
+El resto del archivo vigente sí entra. Los campos de más abajo no están en `ODInf` de 2025 ni de 2026.
 
 ## Sede — solo años anteriores
 
@@ -39,7 +46,7 @@ Ningún campo del archivo vigente queda fuera. Los que se listan abajo no están
 | Campo | Años | Motivo |
 |---|---|---|
 | `N°` | 2019–2023 | Correlativo del export |
-| `COMPETENCIA` | 2019–2023 | El vigente se llama `COMPET` y sí entra |
+| `COMPETENCIA` | 2019–2023 | El vigente se llama `COMPET` y tampoco entra |
 | `ESPECIALISTA` | 2019–2021 | No está en OD 2025/2026 |
 | `JEFE` | 2019–2022 | No está en OD 2025/2026 |
 | `FECHA_ELAB` | 2019–2021 | No está en OD 2025/2026 |

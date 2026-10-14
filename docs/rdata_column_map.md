@@ -10,11 +10,11 @@ Los cortes **2025 y 2026** son los más consumidos. La **forma** de la tabla se 
 
 | Capa | Qué hace |
 |---|---|
-| **Vigente** | Define CORE + EXTRAS BD/OD; máxima completitud en filas 2025–2026 |
+| **Vigente** | Define CORE + EXTRAS BD; máxima completitud en filas 2025–2026 |
 | **Histórica** | Mismos nombres; 2019–2024 aportan valor si existe / vía EQUIV / NULL si no |
 | **Sistema** | Fuera del DW (`N°`, `USUARIO`, …) |
 
-Implementación: [`python/rdata/schema.py`](../python/rdata/schema.py) + [`python/rdata/map.py`](../python/rdata/map.py) — **83 columnas** canónicas (unión vigente BD∪OD + EQUIV; sin meta de export).  
+Implementación: [`python/rdata/schema.py`](../python/rdata/schema.py) + [`python/rdata/map.py`](../python/rdata/map.py) — **82 columnas** canónicas (unión vigente + EQUIV; sin meta de export; sin `OD`, `CATEG`, `COMPET`, `TIPO_OD`).  
 Comentarios Oracle (`COMMENT ON TABLE/COLUMN`) se aplican en cada full refresh vía `escribir_oracle.py`.  
 QA `FG_SIN_INFORME` se calcula en [`logica/informes_rdata.py`](../logica/informes_rdata.py).
 
@@ -53,18 +53,13 @@ Presentes en ambos esquemas actuales (nombres directos):
 | `TIPOACCION_INAPS` | `TIPOACCION_INAPS`, `TXACCION` |
 | `TIPOSUP_INAPS` | `TIPOSUP_INAPS`, `TXTIPSUP` |
 | `EXPEDIENTE` | `EXPEDIENTE`, `TXNUMEXP` |
-| `TIPO_OD` | `TIPO` (solo OD; no confundir con `TIPO_INF`) |
-| `RECOMENDACION_MEDIDAS_ADMIN` | `RECOM_MA`, `RECOMENDACIÓN_MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA`. Mismo orden en sede y OD. `RECOM_MA` también alimenta `RECOM_ACCION` |
+| `RECOMENDACION_MEDIDAS_ADMIN` | `RECOM_MA`, `RECOMENDACIÓN_MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA`. Mismo orden en sede y OD. `RECOM_MA` también alimenta `RECOM_ACCION`. En FORM no se copia este texto: vale `SI` o `NO` según `NU_IDMEDIDA` del hecho |
 
 ## EXTRAS_BD (prioridad consumo BD reciente)
 
 NULL en filas OD y en histórico sin el campo:
 
 `DIREC`, `COORDINADOR`, `DIRECTOR`, `DOC_INICIO_ELA`, `FECHA_INICIO_ELA`, `PROVEIDO`, `FECHA_PROV`, `TIPO_INFRACCION`, `DAÑO_RIESGO_ASOCIADO`, `HUMANOS`, `AIRE`, `FLORA`, `FAUNA`, `AGUA`, `SUELO`, `TIPO_SUBSANACION`, `PRESUNTOS_INCUMPL`, `TOTAL_HECHOS`, `ACTA_TRANSF`, `FECHA_ACTA_TRASNF`, `RPS`, `FECHA_RPS`, `RECOMENDACION_MEDIDAS_ADMIN`, `RES_ACTA_MEDIDA`, `FECHA_MEDIDA`, `ESTADO`, `ANALISTA_LEGAL`, `RESPONSABLE_COMISION`.
-
-## EXTRAS_OD (prioridad consumo OD reciente)
-
-NULL en filas BD: `OD`, `CATEG`, `COMPET`, `TIPO_OD`.
 
 ---
 
@@ -103,7 +98,8 @@ NULL en filas BD: `OD`, `CATEG`, `COMPET`, `TIPO_OD`.
 | Columna fuente `ID_UF` (`SUR…`) | — | No se publica. La columna `ID_UF` sale de `ID_UF_UNIDAD_REV` / `IDUF_REV` y de `IDUF_SIG` |
 | `RECOMENDACION_DE_MEDIDAS_ADMINISTRATIVAS` | — | Nombre largo de sede 2026. Ya no alimenta `RECOMENDACION_MEDIDAS_ADMIN` |
 | `FEREG_SIIA`, `FEAPROB_SIIA`, `FEANUL_SIIA`, `FERPT`, `FGSUPUPD_*`, `TXFUENTE`, `TXOBJETIVO`, `TXUBIGEO_UND`, `TXMES`, `TXESTADO`, `TXESTADO_UF`, `TXETAPA_UF`, `TXDENUNCIA`, `TXMUESTREO`, `TXNVL_CMPLJ`, `TXOTRAFUENTE`, `TXACTIVIDAD_UND`, `TXACTIVIDADES_VINCULADAS`, `TXNOMBRE_*`, `TXCOFEMA`, `TXMOTIVOANULA`, `IDACTIVIDAD`, `IDUNIDAD`, `CUENTA`, `VALIDADO_META`, `MES_META_DERIV`, `FGSUP_ORIENTATIVA` | `R7_SPARSE_LEGACY` | Bloque SIIA / solo años antiguos; **ausente en plantilla 2025/2026** |
-| `ESPECIALISTA`, `JEFE`, `FECHA_ELAB`, `ULTIMO_DOC_ELAB`, `COMPETENCIA` | `R7_SPARSE_LEGACY` | OD antiguos; no en OD 2025/2026 (sí están `COMPET`/`CATEG`/`OD`) |
+| `OD`, `CATEG`, `COMPET`, `TIPO` | — | Dejan de publicarse. `TIPO` antes alimentaba `TIPO_OD` |
+| `ESPECIALISTA`, `JEFE`, `FECHA_ELAB`, `ULTIMO_DOC_ELAB`, `COMPETENCIA` | `R7_SPARSE_LEGACY` | OD antiguos; no en OD 2025/2026. `COMPET` vigente tampoco entra |
 | `COORDINACION`, `TXACCION`, `TXTIPSUP`, `TXNUMEXP` | `R1_CUBIERTO_EQUIV` | Absorbidos hacia canónicas vigentes |
 | `SECTOR`, `SUBSECTOR` | `R1_CUBIERTO_EQUIV` | → `SECTOR_O_SUBSECTOR` |
 | `RECOM_INAPS`, `RECOM_MA`, `RECOM_MEDIDAS`, `RECOM_MEDIDA`, `RECOMENDACIÓN MEDIDAS` | `R1_CUBIERTO_EQUIV` | `RECOM_ACCION` y/o `RECOMENDACION_MEDIDAS_ADMIN` |
