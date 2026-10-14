@@ -26,7 +26,7 @@ Gana el primer valor que ya viene lleno, en el orden de la fila.
 
 | Tabla única | SEDE | OD |
 |---|---|---|
-| `ID_ADMINISTRADO` | `IDADMINISTRADO_REV`, `IDADMIN`, `IDAMIN`, `ID_ADMIN`, `IDADMINISTRADO` | `IDADMIN` |
+| `ID_ADMINISTRADO` | `IDADMINISTRADO_REV`, `IDADMIN`, `IDAMIN`, `ID_ADMIN`, `IDADMINISTRADO` | `IDADMIN`, `IDADMINISTRADO` |
 | `ADMIN` | `ADMIN`, `ADMINISTRADO_INAPS` | `ADMIN`, `ADMINISTRADO_INAPS` |
 | `ID_UF` | `ID_UF_UNIDAD_REV`, `IDUF_SIG`. El `SUR…` de la columna fuente `ID_UF` no se publica | `IDUF_REV`, `IDUF_SIG` |
 | `UF` | `UF`, `UF_INAPS` | `UF`, `UF_INAPS` |
@@ -38,12 +38,11 @@ Gana el primer valor que ya viene lleno, en el orden de la fila.
 | `EXPEDIENTE` | `EXPEDIENTE` | `EXPEDIENTE`, `TXNUMEXP` |
 | `RECOMENDACION_MEDIDAS_ADMIN` | `RECOM_MA`, `RECOMENDACIÓN MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA` | `RECOM_MA`, `RECOMENDACIÓN MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA` |
 
-Dos códigos se guardan además tal como vienen, porque en sede no son el mismo valor que la columna unificada:
+Un código se guarda además tal como viene, porque en sede no es el mismo valor que la columna unificada:
 
 | Tabla única | SEDE | OD |
 |---|---|---|
 | `IDUF_SIG` | `IDUF_SIG` (`UF…`). La columna publicada `ID_UF` usa este código si `ID_UF_UNIDAD_REV` viene vacío | `IDUF_SIG`. En OD, `ID_UF` repite este código si `IDUF_REV` viene vacío |
-| `IDADMINISTRADO` | `IDADMINISTRADO`. Puede diferir de `IDAMIN` / `ID_ADMIN` | `IDADMINISTRADO` si el archivo lo trae |
 
 `PK_OFICINA` no está en el RData. Se arma después, cruzando el texto de `TXCOORDINACION` con `T_SEP_OFICINA`.
 

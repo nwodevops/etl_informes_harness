@@ -14,7 +14,7 @@ Los cortes **2025 y 2026** son los más consumidos. La **forma** de la tabla se 
 | **Histórica** | Mismos nombres; 2019–2024 aportan valor si existe / vía EQUIV / NULL si no |
 | **Sistema** | Fuera del DW (`N°`, `USUARIO`, …) |
 
-Implementación: [`python/rdata/schema.py`](../python/rdata/schema.py) + [`python/rdata/map.py`](../python/rdata/map.py) — **82 columnas** canónicas (unión vigente + EQUIV; sin meta de export; sin `OD`, `CATEG`, `COMPET`, `TIPO_OD`).  
+Implementación: [`python/rdata/schema.py`](../python/rdata/schema.py) + [`python/rdata/map.py`](../python/rdata/map.py) — **81 columnas** canónicas (unión vigente + EQUIV; sin meta de export; sin `OD`, `CATEG`, `COMPET`, `TIPO_OD`, `IDADMINISTRADO`).  
 Comentarios Oracle (`COMMENT ON TABLE/COLUMN`) se aplican en cada full refresh vía `escribir_oracle.py`.  
 QA `FG_SIN_INFORME` se calcula en [`logica/informes_rdata.py`](../logica/informes_rdata.py).
 
@@ -41,8 +41,7 @@ Presentes en ambos esquemas actuales (nombres directos):
 
 | Canónica | Fuentes (orden) |
 |---|---|
-| `ID_ADMINISTRADO` | Sede: `IDADMINISTRADO_REV`, `IDADMIN`, `IDAMIN`, `ID_ADMIN`, `IDADMINISTRADO`. OD: `IDADMIN` |
-| `IDADMINISTRADO` | copia directa (no coalesce). Sigue siendo fuente de `ID_ADMINISTRADO` en sede. Puede diferir cuando `IDAMIN` ya viene lleno. |
+| `ID_ADMINISTRADO` | Sede: `IDADMINISTRADO_REV`, `IDADMIN`, `IDAMIN`, `ID_ADMIN`, `IDADMINISTRADO`. OD: `IDADMIN`, `IDADMINISTRADO` |
 | `ID_UF` | Sede: `ID_UF_UNIDAD_REV`, `IDUF_SIG`. OD: `IDUF_REV`, `IDUF_SIG`. El `SUR…` de la columna fuente `ID_UF` no se publica |
 | `IDUF_SIG` | copia directa (no coalesce). Sigue siendo fuente de `ID_UF`. |
 | `ADMIN` | `ADMIN`, `ADMINISTRADO_INAPS`, `TXADMINISTRADO_ADM` |

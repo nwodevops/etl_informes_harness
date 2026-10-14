@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Asegura tablas DW en oracle_dw y mysql_dw (CREATE si no existen; sin DROP TABLE).
 
-Sí hace DROP COLUMN de OD, CATEG, COMPET y TIPO_OD si la tabla ya las tiene.
+Sí hace DROP COLUMN de OD, CATEG, COMPET, TIPO_OD e IDADMINISTRADO si la tabla ya las tiene.
 
 Lo llama wf_create_stg (diseño) antes de mapear / de la primera corrida.
 Runtime (wf_main) solo TRUNCATE+INSERT.
@@ -40,7 +40,7 @@ ESQUEMA = "APP"
 TABLE_RDATA = "DW_INF_CONSOL_RDATA"
 TABLE_FORM = "DW_INF_CONSOL_FORM"
 TABLE_CSEP = "DW_INF_CSEP_INFORMES_VIEW"
-_RETIRED_COLS = ("OD", "CATEG", "COMPET", "TIPO_OD")
+_RETIRED_COLS = ("OD", "CATEG", "COMPET", "TIPO_OD", "IDADMINISTRADO")
 SRC_VIEW = "CSEP_INFORMES_VIEW"
 
 
@@ -140,7 +140,6 @@ def _ensure_canonical(cur, schema: str, table: str, ts: str) -> str:
         return "created"
     added = _oracle_add_pk(cur, schema, table)
     added.extend(_oracle_add_iduf_sig(cur, schema, table))
-    added.extend(_oracle_add_idadministrado(cur, schema, table))
     added.extend(_oracle_drop_retired(cur, schema, table))
     return f"altered:{','.join(added)}" if added else "exists"
 
@@ -175,16 +174,6 @@ def _oracle_add_iduf_sig(cur, schema: str, table: str) -> list[str]:
     cur.execute(f"ALTER TABLE {schema}.{table} ADD IDUF_SIG VARCHAR2(20)")
     cur.execute(f"COMMENT ON COLUMN {schema}.{table}.IDUF_SIG IS '{cmt}'")
     return ["IDUF_SIG"]
-
-
-def _oracle_add_idadministrado(cur, schema: str, table: str) -> list[str]:
-    """Solo DW_INF_CONSOL_RDATA. No llamar desde FORM."""
-    if _column_exists(cur, table, "IDADMINISTRADO"):
-        return []
-    cmt = COLUMN_COMMENTS["IDADMINISTRADO"].replace("'", "''")
-    cur.execute(f"ALTER TABLE {schema}.{table} ADD IDADMINISTRADO VARCHAR2(20)")
-    cur.execute(f"COMMENT ON COLUMN {schema}.{table}.IDADMINISTRADO IS '{cmt}'")
-    return ["IDADMINISTRADO"]
 
 
 def _oracle_drop_retired(cur, schema: str, table: str) -> list[str]:
@@ -392,18 +381,6 @@ def _mysql_add_iduf_sig(cur, table: str) -> list[str]:
     return ["IDUF_SIG"]
 
 
-def _mysql_add_idadministrado(cur, table: str) -> list[str]:
-    """Solo DW_INF_CONSOL_RDATA. No llamar desde FORM."""
-    if _mysql_column_exists(cur, table, "IDADMINISTRADO"):
-        return []
-    cmt = COLUMN_COMMENTS["IDADMINISTRADO"].replace("\\", "\\\\").replace("'", "''")
-    cur.execute(
-        f"ALTER TABLE `{table}` ADD COLUMN `IDADMINISTRADO` VARCHAR(20) NULL "
-        f"COMMENT '{cmt}'"
-    )
-    return ["IDADMINISTRADO"]
-
-
 def _mysql_drop_retired(cur, table: str) -> list[str]:
     dropped: list[str] = []
     for col in _RETIRED_COLS:
@@ -420,7 +397,6 @@ def _ensure_mysql_rdata(cur) -> str:
         return "created"
     added = _mysql_add_pk(cur, TABLE_RDATA)
     added.extend(_mysql_add_iduf_sig(cur, TABLE_RDATA))
-    added.extend(_mysql_add_idadministrado(cur, TABLE_RDATA))
     added.extend(_mysql_drop_retired(cur, TABLE_RDATA))
     return f"altered:{','.join(added)}" if added else "exists"
 

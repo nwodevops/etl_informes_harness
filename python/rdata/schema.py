@@ -64,8 +64,6 @@ CORE: list[tuple[str, str, str]] = [
 
 EXTRAS_EQUIV: list[tuple[str, str, str]] = [
     ("ID_ADMINISTRADO", "VARCHAR", "VARCHAR2"),
-    # Copia directa (no es clave de EQUIV). Sigue siendo fuente de ID_ADMINISTRADO.
-    ("IDADMINISTRADO", "VARCHAR", "VARCHAR2"),
     ("ID_UF", "VARCHAR", "VARCHAR2"),
     # Copia directa (no es clave de EQUIV). Sigue siendo fuente de ID_UF.
     ("IDUF_SIG", "VARCHAR", "VARCHAR2"),
@@ -74,8 +72,8 @@ EXTRAS_EQUIV: list[tuple[str, str, str]] = [
 ]
 
 # Solo DW_INF_CONSOL_RDATA. FORM no las lleva.
-RDATA_ONLY_COLS = frozenset({"IDUF_SIG", "IDADMINISTRADO"})
-_SHORT_VARCHAR = frozenset({"PK_OFICINA", "IDUF_SIG", "IDADMINISTRADO"})
+RDATA_ONLY_COLS = frozenset({"IDUF_SIG"})
+_SHORT_VARCHAR = frozenset({"PK_OFICINA", "IDUF_SIG"})
 
 EXTRAS_BD: list[tuple[str, str, str]] = [
     ("DIREC", "VARCHAR", "VARCHAR2"),
@@ -179,8 +177,7 @@ COLUMN_COMMENTS: dict[str, str] = {
     "FE_REGISTRO_DOCUMENTO_PREVIO": "Fecha de registro del documento previo.",
     "TX_OTRO_DOCUMENTO_PREVIO": "Otro documento previo (texto).",
     "FE_DERIV_DOC_DERIVACION": "Fecha de derivación del documento de derivación.",
-    "ID_ADMINISTRADO": "Id del administrado. Sede: IDADMINISTRADO_REV, IDADMIN, IDAMIN, ID_ADMIN, IDADMINISTRADO. OD: IDADMIN. IDADMINISTRADO también se persiste en su columna.",
-    "IDADMINISTRADO": "Código de administrado del RData (ADM#####). Copia directa. Puede diferir de ID_ADMINISTRADO cuando IDAMIN ya viene lleno.",
+    "ID_ADMINISTRADO": "Id del administrado. Sede: IDADMINISTRADO_REV, IDADMIN, IDAMIN, ID_ADMIN, IDADMINISTRADO. OD: IDADMIN, IDADMINISTRADO.",
     "ID_UF": "Id de la unidad fiscalizable. Sede: ID_UF_UNIDAD_REV, IDUF_SIG. OD: IDUF_REV, IDUF_SIG. El SUR de la columna fuente ID_UF no se publica. IDUF_SIG también se persiste en su columna.",
     "IDUF_SIG": "Código SIG de la unidad fiscalizable (UF#######). Copia directa del RData. En sede el archivo trae además un SUR en la columna ID_UF, que no se publica.",
     "RECOM_ACCION": "Recomendación de acción / medidas (EQUIV: RECOM_INAPS, RECOM_MA, RECOM_MEDIDAS).",

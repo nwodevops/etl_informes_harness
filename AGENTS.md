@@ -9,9 +9,9 @@ ETL **Apache Hop + H2 in-memory + Python** para informes de supervisión (FORM, 
 | Flujo | Entrypoint | Qué ejecuta | Tablas destino (`oracle_dw` + `mysql_dw`) |
 |---|---|---|---|
 | **Diario** (sin H2) | `./init.sh`, `init.bat`, `run_wf_main.bat`, `workflows/wf_main*.hwf` | Hop `pl_form_informes.hpl` + `pl_csep_informes.hpl` + `python/check_form_pk.py` | `DW_INF_CONSOL_FORM` (81 cols, con `FECHA_CARGA`), `DW_INF_CSEP_INFORMES_VIEW` |
-| **Bajo demanda** (RData + DDL) | `workflows/wf_create_stg.hwf` / `wf_create_stg_windows.hwf` | Reset H2 → `create_stg.py` → `ensure_dw_tables.py` → `stage_rdata.py` → `python/main.py` (`logica/informes_rdata.py` + `rdata/oficina.py`) | `DW_INF_CONSOL_RDATA` (82 cols: incluye `IDUF_SIG` e `IDADMINISTRADO`; sin `FECHA_CARGA`) |
+| **Bajo demanda** (RData + DDL) | `workflows/wf_create_stg.hwf` / `wf_create_stg_windows.hwf` | Reset H2 → `create_stg.py` → `ensure_dw_tables.py` → `stage_rdata.py` → `python/main.py` (`logica/informes_rdata.py` + `rdata/oficina.py`) | `DW_INF_CONSOL_RDATA` (81 cols: incluye `IDUF_SIG`; sin `FECHA_CARGA` ni `IDADMINISTRADO`) |
 
-- **DDL idempotente (sin DROP TABLE):** `.venv/bin/python python/stg/ensure_dw_tables.py` crea o aplica `ALTER TABLE ADD` sobre las 3 tablas en `oracle_dw` y `mysql_dw`. Si `DW_INF_CONSOL_FORM` o `DW_INF_CONSOL_RDATA` aún tienen `OD`, `CATEG`, `COMPET` o `TIPO_OD`, las quita con `DROP COLUMN`. SQL de referencia en `sql/dw/` y `sql/dw/mysql/`.
+- **DDL idempotente (sin DROP TABLE):** `.venv/bin/python python/stg/ensure_dw_tables.py` crea o aplica `ALTER TABLE ADD` sobre las 3 tablas en `oracle_dw` y `mysql_dw`. Si `DW_INF_CONSOL_FORM` o `DW_INF_CONSOL_RDATA` aún tienen `OD`, `CATEG`, `COMPET`, `TIPO_OD` o `IDADMINISTRADO`, las quita con `DROP COLUMN`. SQL de referencia en `sql/dw/` y `sql/dw/mysql/`.
 - **Fuente MySQL vs Destino MySQL:** La conexión Hop `mysql` (`DB_MYSQL_*`) es la **fuente** HEC (`gappsdb`). La conexión `mysql_dw` (`DB_MYSQL_DW_*`) es el **destino espejo DW**.
 - **SQL de FORM embebido:** `pipelines/pl_form_informes.hpl` embebe el SELECT de `input/input_mysql/vw_inf_consol_simil.sql` (con `NOW() AS FECHA_CARGA`). Si cambia el query de FORM, actualizar el `.sql` y el `<sql>` dentro de `pl_form_informes.hpl`. El `.sql` no lo ejecuta Hop: es referencia para probar a mano en MySQL `gappsdb`.
 
@@ -59,7 +59,7 @@ Variables de conexión en `environments/local.json` y `environments/remote.json`
 
 1. **Prioridad:** Apache Hop mueve las filas 1:1 (`pl_form_informes`, `pl_csep_informes`). Python en `python/rdata/` + `logica/informes_rdata.py` homologa y procesa los `.RData` vía H2 (`STG_INF_CONSOL`).
 2. **Un solo `.py`** en `logica/` (`informes_rdata.py`). `python/main.py` falla si hay 0 o >1.
-3. **Diferencia de esquema RDATA vs FORM:** `IDUF_SIG` e `IDADMINISTRADO` están en `RDATA_ONLY_COLS` (`python/rdata/schema.py`) y solo existen en `DW_INF_CONSOL_RDATA`. `FECHA_CARGA` solo existe en `DW_INF_CONSOL_FORM`. `PK_OFICINA` existe en ambas (en FORM viene de `T_SEP_OFICINA.PK_OFICINA`; en RData la calcula `python/rdata/oficina.py` usando `oficina_alias.yaml`).
+3. **Diferencia de esquema RDATA vs FORM:** `IDUF_SIG` está en `RDATA_ONLY_COLS` (`python/rdata/schema.py`) y solo existe en `DW_INF_CONSOL_RDATA`. `FECHA_CARGA` solo existe en `DW_INF_CONSOL_FORM`. `PK_OFICINA` existe en ambas (en FORM viene de `T_SEP_OFICINA.PK_OFICINA`; en RData la calcula `python/rdata/oficina.py` usando `oficina_alias.yaml`). El nombre fuente `IDADMINISTRADO` alimenta el coalesce de `ID_ADMINISTRADO` y no se publica como columna.
 4. **Sin secretos** en git (`project-config.json` y `docs/credenciales/` están en `.gitignore`).
 5. **Sin `${VAR}` literal** en logs Hop = variable mal definida.
 6. `logica/` no abre conexiones. I/O vive en `python/io/`.

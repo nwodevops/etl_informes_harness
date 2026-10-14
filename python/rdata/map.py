@@ -26,7 +26,7 @@ DIRECT_COLS = (
     | {c[0] for c in EXTRAS_BD}
     | {c[0] for c in EXTRAS_EQUIV}
 ) - {"RECOMENDACION_MEDIDAS_ADMIN"}  # solo vía EQUIV
-# Claves de EQUIV se saltan en el bucle directo; IDUF_SIG e IDADMINISTRADO se copian.
+# Claves de EQUIV se saltan en el bucle directo; IDUF_SIG se copia.
 
 # TODO /step 4 — nombres distintos, un solo campo. Primer valor lleno gana.
 # Tabla: docs/equivalencias_sede_od.md
@@ -62,7 +62,7 @@ EQUIV_POR_FUENTE: dict[str, dict[str, list[str]]] = {
         "ID_UF": ["ID_UF_UNIDAD_REV", "IDUF_SIG"],
     },
     "OD": {
-        "ID_ADMINISTRADO": ["IDADMIN"],
+        "ID_ADMINISTRADO": ["IDADMIN", "IDADMINISTRADO"],
         "ID_UF": ["IDUF_REV", "IDUF_SIG"],
     },
 }
@@ -179,7 +179,7 @@ def map_to_canonical(
 
     # TODO /step 3 — mismo nombre en SEDE y OD: copia directa.
     # Si la columna no está en ese archivo, queda vacía (solo sede o solo OD).
-    # TODO /step 3 — IDUF_SIG e IDADMINISTRADO no son clave de EQUIV: también se copian aquí.
+    # TODO /step 3 — IDUF_SIG no es clave de EQUIV: también se copia aquí.
     for col in DIRECT_COLS:
         if col in EQUIV:
             continue
