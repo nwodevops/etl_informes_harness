@@ -32,9 +32,8 @@ DIRECT_COLS = (
 
 # TODO /step 4 — nombres distintos, un solo campo. Primer valor lleno gana.
 # Tabla: docs/equivalencias_sede_od.md
+# ID_ADMINISTRADO e ID_UF dependen de la fuente (EQUIV_POR_FUENTE).
 EQUIV: dict[str, list[str]] = {
-    "ID_ADMINISTRADO": ["IDADMIN", "IDAMIN", "ID_ADMIN", "IDADMINISTRADO"],
-    "ID_UF": ["IDUF", "ID_UF", "IDUF_SIG"],
     "ADMIN": ["ADMIN", "ADMINISTRADO_INAPS", "TXADMINISTRADO_ADM"],
     "UF": ["UF", "UF_INAPS", "TXUNIDAD"],
     "RECOM_ACCION": ["RECOM_INAPS", "RECOM_MA", "RECOM_MEDIDAS"],
@@ -45,9 +44,30 @@ EQUIV: dict[str, list[str]] = {
     "EXPEDIENTE": ["EXPEDIENTE", "TXNUMEXP"],
     "TIPO_OD": ["TIPO"],
     "RECOMENDACION_MEDIDAS_ADMIN": [
-        "RECOMENDACION_MEDIDAS_ADMIN",
-        "RECOMENDACION_DE_MEDIDAS_ADMINISTRATIVAS",
+        "RECOM_MA",
+        "RECOMENDACIÓN_MEDIDAS",
+        "RECOM_MEDIDAS",
+        "RECOM_MEDIDA",
     ],
+}
+
+# Sede (BD) y OD no comparten el orden de estos dos campos.
+# UNK usa la lista de sede. El SUR de la columna fuente ID_UF no entra.
+EQUIV_POR_FUENTE: dict[str, dict[str, list[str]]] = {
+    "BD": {
+        "ID_ADMINISTRADO": [
+            "IDADMINISTRADO_REV",
+            "IDADMIN",
+            "IDAMIN",
+            "ID_ADMIN",
+            "IDADMINISTRADO",
+        ],
+        "ID_UF": ["ID_UF_UNIDAD_REV", "IDUF_SIG"],
+    },
+    "OD": {
+        "ID_ADMINISTRADO": ["IDADMIN"],
+        "ID_UF": ["IDUF_REV", "IDUF_SIG"],
+    },
 }
 
 _CR_RE = re.compile(r"[\r\n]+")
@@ -171,8 +191,10 @@ def map_to_canonical(
         else:
             data[col] = pd.Series([pd.NA] * n)
 
-    # TODO /step 4 — aplicar la tabla EQUIV (SEDE y OD al campo único).
-    for canon, sources in EQUIV.items():
+    # TODO /step 4 — aplicar la tabla EQUIV. ID_ADMINISTRADO e ID_UF según fuente.
+    equiv = dict(EQUIV)
+    equiv.update(EQUIV_POR_FUENTE.get(fuente, EQUIV_POR_FUENTE["BD"]))
+    for canon, sources in equiv.items():
         data[canon] = _coalesce_series(raw, sources, n)
 
     out = pd.DataFrame(data)

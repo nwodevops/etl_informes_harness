@@ -41,10 +41,10 @@ Presentes en ambos esquemas actuales (nombres directos):
 
 | Canónica | Fuentes (orden) |
 |---|---|
-| `ID_ADMINISTRADO` | `IDADMIN`, `IDAMIN`, `ID_ADMIN`, `IDADMINISTRADO` |
-| `IDADMINISTRADO` | copia directa (no coalesce). Sigue siendo la cuarta fuente de `ID_ADMINISTRADO`. Puede diferir cuando `IDAMIN` ya viene lleno. |
-| `ID_UF` | `IDUF`, `ID_UF`, `IDUF_SIG` |
-| `IDUF_SIG` | copia directa (no coalesce). Sigue siendo la tercera fuente de `ID_UF`. En BD el código `UF…` es distinto del `SUR…` de `ID_UF`. |
+| `ID_ADMINISTRADO` | Sede: `IDADMINISTRADO_REV`, `IDADMIN`, `IDAMIN`, `ID_ADMIN`, `IDADMINISTRADO`. OD: `IDADMIN` |
+| `IDADMINISTRADO` | copia directa (no coalesce). Sigue siendo fuente de `ID_ADMINISTRADO` en sede. Puede diferir cuando `IDAMIN` ya viene lleno. |
+| `ID_UF` | Sede: `ID_UF_UNIDAD_REV`, `IDUF_SIG`. OD: `IDUF_REV`, `IDUF_SIG`. El `SUR…` de la columna fuente `ID_UF` no se publica |
+| `IDUF_SIG` | copia directa (no coalesce). Sigue siendo fuente de `ID_UF`. |
 | `ADMIN` | `ADMIN`, `ADMINISTRADO_INAPS`, `TXADMINISTRADO_ADM` |
 | `UF` | `UF`, `UF_INAPS`, `TXUNIDAD` |
 | `RECOM_ACCION` | `RECOM_INAPS`, `RECOM_MA`, `RECOM_MEDIDAS` |
@@ -54,7 +54,7 @@ Presentes en ambos esquemas actuales (nombres directos):
 | `TIPOSUP_INAPS` | `TIPOSUP_INAPS`, `TXTIPSUP` |
 | `EXPEDIENTE` | `EXPEDIENTE`, `TXNUMEXP` |
 | `TIPO_OD` | `TIPO` (solo OD; no confundir con `TIPO_INF`) |
-| `RECOMENDACION_MEDIDAS_ADMIN` | `RECOMENDACION_DE_MEDIDAS_ADMINISTRATIVAS` |
+| `RECOMENDACION_MEDIDAS_ADMIN` | `RECOM_MA`, `RECOMENDACIÓN_MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA`. Mismo orden en sede y OD. `RECOM_MA` también alimenta `RECOM_ACCION` |
 
 ## EXTRAS_BD (prioridad consumo BD reciente)
 
@@ -99,12 +99,15 @@ NULL en filas BD: `OD`, `CATEG`, `COMPET`, `TIPO_OD`.
 | `FECHA_REGISTRO` | `R5_SISTEMA_META` | Timestamp de registro/export |
 | `INF_EVAL` | `R6_VACIA_O_CASI` | ~1% en Ago-2026; sin señal |
 | `FECHA_INF_EVAL` | `R6_VACIA_O_CASI` | Idem |
-| `ADMIN_REV`, `IDAMIN_REV`, `IDUF_REV`, `UF_REV`, `TXUNIDAD_REV`, `IDADMINISTRADO_REV`, `ID_SUR_UNIDAD_REV`, `ID_UF_UNIDAD_REV`, `TXADMINISTRADO_ADM_REV`, `FGSUP_ORIENTATIVA_REV` | `R4_REVISION` | Mirrors de revisión |
+| `ADMIN_REV`, `IDAMIN_REV`, `UF_REV`, `TXUNIDAD_REV`, `ID_SUR_UNIDAD_REV`, `TXADMINISTRADO_ADM_REV`, `FGSUP_ORIENTATIVA_REV` | `R4_REVISION` | Mirrors de revisión. `IDADMINISTRADO_REV`, `ID_UF_UNIDAD_REV` e `IDUF_REV` sí entran al coalesce |
+| Columna fuente `ID_UF` (`SUR…`) | — | No se publica. La columna `ID_UF` sale de `ID_UF_UNIDAD_REV` / `IDUF_REV` y de `IDUF_SIG` |
+| `RECOMENDACION_DE_MEDIDAS_ADMINISTRATIVAS` | — | Nombre largo de sede 2026. Ya no alimenta `RECOMENDACION_MEDIDAS_ADMIN` |
 | `FEREG_SIIA`, `FEAPROB_SIIA`, `FEANUL_SIIA`, `FERPT`, `FGSUPUPD_*`, `TXFUENTE`, `TXOBJETIVO`, `TXUBIGEO_UND`, `TXMES`, `TXESTADO`, `TXESTADO_UF`, `TXETAPA_UF`, `TXDENUNCIA`, `TXMUESTREO`, `TXNVL_CMPLJ`, `TXOTRAFUENTE`, `TXACTIVIDAD_UND`, `TXACTIVIDADES_VINCULADAS`, `TXNOMBRE_*`, `TXCOFEMA`, `TXMOTIVOANULA`, `IDACTIVIDAD`, `IDUNIDAD`, `CUENTA`, `VALIDADO_META`, `MES_META_DERIV`, `FGSUP_ORIENTATIVA` | `R7_SPARSE_LEGACY` | Bloque SIIA / solo años antiguos; **ausente en plantilla 2025/2026** |
 | `ESPECIALISTA`, `JEFE`, `FECHA_ELAB`, `ULTIMO_DOC_ELAB`, `COMPETENCIA` | `R7_SPARSE_LEGACY` | OD antiguos; no en OD 2025/2026 (sí están `COMPET`/`CATEG`/`OD`) |
 | `COORDINACION`, `TXACCION`, `TXTIPSUP`, `TXNUMEXP` | `R1_CUBIERTO_EQUIV` | Absorbidos hacia canónicas vigentes |
 | `SECTOR`, `SUBSECTOR` | `R1_CUBIERTO_EQUIV` | → `SECTOR_O_SUBSECTOR` |
-| `RECOM_INAPS`, `RECOM_MA` | `R1_CUBIERTO_EQUIV` | → `RECOM_ACCION` |
+| `RECOM_INAPS`, `RECOM_MA`, `RECOM_MEDIDAS`, `RECOM_MEDIDA`, `RECOMENDACIÓN MEDIDAS` | `R1_CUBIERTO_EQUIV` | `RECOM_ACCION` y/o `RECOMENDACION_MEDIDAS_ADMIN` |
+| `IDADMINISTRADO_REV`, `ID_UF_UNIDAD_REV`, `IDUF_REV` | `R1_CUBIERTO_EQUIV` | → `ID_ADMINISTRADO` / `ID_UF` |
 | `ADMINISTRADO_INAPS`, `UF_INAPS`, `IDADMIN` | `R1_CUBIERTO_EQUIV` | → `ADMIN` / `UF` / `ID_ADMINISTRADO` |
 
 ---

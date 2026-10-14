@@ -1,6 +1,6 @@
 # Sesión activa
 
-**Feature:** `fase-12-form-csep-doc-previo` (done)
+**Feature:** `fase-13-coalesce-fuente` (done)
 **Rama:** `feature/mysql-dw-mirror`
 
-`DW_INF_CONSOL_FORM` toma los 6 campos de documento previo y derivación (`TX_DOCUMENTO_PREVIO`, `TX_NUMERO_DOCUMENTO_PREVIO`, `FE_DOCUMENTO_PREVIO`, `FE_REGISTRO_DOCUMENTO_PREVIO`, `TX_OTRO_DOCUMENTO_PREVIO`, `FE_DERIV_DOC_DERIVACION`) desde `DW_INF_CSEP_INFORMES_VIEW` por `TRIM(TXINFORME) = TRIM(TX_NUMINFORME)`. `pl_csep_informes` corre antes de `pl_form_informes`. Ver `progress/impl_fase-12-form-csep-doc-previo.md`.
+Coalesce por fuente en `DW_INF_CONSOL_RDATA`: `ID_ADMINISTRADO` e `ID_UF` dependen de sede u OD. `RECOMENDACION_MEDIDAS_ADMIN` usa `RECOM_MA`, `RECOMENDACIÓN_MEDIDAS`, `RECOM_MEDIDAS` y `RECOM_MEDIDA`. El `SUR…` de `ID_UF` y el nombre largo de medidas de sede 2026 dejan de publicarse. Ver `progress/impl_fase-13-coalesce-fuente.md`.

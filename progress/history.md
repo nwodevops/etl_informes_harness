@@ -89,6 +89,12 @@ Al cerrar una feature, append aquí: fecha, id, resumen, evidencia (`progress/im
 - Criterio de cada feature solo en `feature_list.json`. CHECKPOINTS queda en compuertas globales.
 - Sin revisor obligatorio. `init.sh` / `init.bat` cuentan `PK_OFICINA` en FORM (`python/check_form_pk.py`). RData sigue fuera de HARNESS OK.
 
+## 2026-10-14 — fase-13-coalesce-fuente
+
+- Coalesce por fuente en `DW_INF_CONSOL_RDATA`. Sede: `ID_ADMINISTRADO` desde `IDADMINISTRADO_REV`; `ID_UF` desde `ID_UF_UNIDAD_REV` e `IDUF_SIG` (el `SUR…` no se publica). OD: `IDADMIN` e `IDUF_REV`/`IDUF_SIG`.
+- `RECOMENDACION_MEDIDAS_ADMIN`: `RECOM_MA`, `RECOMENDACIÓN_MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA`. Sin columna nueva. FORM y CSEP no cambian.
+- Evidencia: `progress/impl_fase-13-coalesce-fuente.md`. CHID agosto 2026 `ID_UF=UF0013687`. `init.sh` no cubre RData.
+
 ## 2026-10-13 — fase-12-form-csep-doc-previo
 
 - FORM (`vw_inf_consol_simil.sql`, `create_vw_inf_consol_simil.sql`, `pl_form_informes.hpl`): obtiene `TX_DOCUMENTO_PREVIO`, `TX_NUMERO_DOCUMENTO_PREVIO`, `FE_DOCUMENTO_PREVIO`, `FE_REGISTRO_DOCUMENTO_PREVIO`, `TX_OTRO_DOCUMENTO_PREVIO` y `FE_DERIV_DOC_DERIVACION` desde `DW_INF_CSEP_INFORMES_VIEW` por `TRIM(TXINFORME) = TRIM(TX_NUMINFORME)` (CTE `csep` con `rn = 1`).

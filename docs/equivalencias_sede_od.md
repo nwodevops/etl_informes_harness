@@ -26,9 +26,9 @@ Gana el primer valor que ya viene lleno, en el orden de la fila.
 
 | Tabla única | SEDE | OD |
 |---|---|---|
-| `ID_ADMINISTRADO` | `IDADMIN`, `IDAMIN`, `ID_ADMIN`, `IDADMINISTRADO` | `IDADMIN` |
+| `ID_ADMINISTRADO` | `IDADMINISTRADO_REV`, `IDADMIN`, `IDAMIN`, `ID_ADMIN`, `IDADMINISTRADO` | `IDADMIN` |
 | `ADMIN` | `ADMIN`, `ADMINISTRADO_INAPS` | `ADMIN`, `ADMINISTRADO_INAPS` |
-| `ID_UF` | `ID_UF`, y si viene vacío `IDUF_SIG` | `IDUF_SIG` |
+| `ID_UF` | `ID_UF_UNIDAD_REV`, `IDUF_SIG`. El `SUR…` de la columna fuente `ID_UF` no se publica | `IDUF_REV`, `IDUF_SIG` |
 | `UF` | `UF`, `UF_INAPS` | `UF`, `UF_INAPS` |
 | `RECOM_ACCION` | `RECOM_INAPS` | `RECOM_MA` |
 | `SECTOR_O_SUBSECTOR` | `SECTOR` | `SUBSECTOR` |
@@ -37,13 +37,13 @@ Gana el primer valor que ya viene lleno, en el orden de la fila.
 | `TIPOSUP_INAPS` | `TIPOSUP_INAPS` | `TIPOSUP_INAPS`, `TXTIPSUP` |
 | `EXPEDIENTE` | `EXPEDIENTE` | `EXPEDIENTE`, `TXNUMEXP` |
 | `TIPO_OD` | — | `TIPO` |
-| `RECOMENDACION_MEDIDAS_ADMIN` | `RECOMENDACION DE MEDIDAS ADMINISTRATIVAS` | — |
+| `RECOMENDACION_MEDIDAS_ADMIN` | `RECOM_MA`, `RECOMENDACIÓN MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA` | `RECOM_MA`, `RECOMENDACIÓN MEDIDAS`, `RECOM_MEDIDAS`, `RECOM_MEDIDA` |
 
 Dos códigos se guardan además tal como vienen, porque en sede no son el mismo valor que la columna unificada:
 
 | Tabla única | SEDE | OD |
 |---|---|---|
-| `IDUF_SIG` | `IDUF_SIG` (`UF…`). `ID_UF` guarda el `SUR…` | `IDUF_SIG`. En OD, `ID_UF` repite este mismo código |
+| `IDUF_SIG` | `IDUF_SIG` (`UF…`). La columna publicada `ID_UF` usa este código si `ID_UF_UNIDAD_REV` viene vacío | `IDUF_SIG`. En OD, `ID_UF` repite este código si `IDUF_REV` viene vacío |
 | `IDADMINISTRADO` | `IDADMINISTRADO`. Puede diferir de `IDAMIN` / `ID_ADMIN` | `IDADMINISTRADO` si el archivo lo trae |
 
 `PK_OFICINA` no está en el RData. Se arma después, cruzando el texto de `TXCOORDINACION` con `T_SEP_OFICINA`.
@@ -66,5 +66,7 @@ En filas sede quedan vacías.
 |---|---|
 | `N°`, `USUARIO`, `FECHA_REGISTRO` | Dato de exportación, no del informe |
 | `INF_EVAL`, `FECHA_INF_EVAL` | Casi vacías en el corte vigente |
-| `*_REV` (`ADMIN_REV`, `IDUF_REV`, …) | Copia de revisión |
+| Columna fuente `ID_UF` (`SUR…`) | Ya no alimenta la columna publicada `ID_UF` |
+| `RECOMENDACION DE MEDIDAS ADMINISTRATIVAS` | Nombre vigente de sede 2026. Ya no alimenta `RECOMENDACION_MEDIDAS_ADMIN` |
+| `*_REV` salvo `IDADMINISTRADO_REV`, `ID_UF_UNIDAD_REV` e `IDUF_REV` | Copia de revisión. Esas tres sí entran al coalesce |
 | Bloque SIIA 2019–2020 (`TXESTADO`, `CUENTA`, `ESPECIALISTA`, …) | No está en la plantilla 2025/2026 |
