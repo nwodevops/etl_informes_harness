@@ -28,7 +28,7 @@ from rdata.map import (  # noqa: E402
     parse_fuente_from_name,
     parse_mes_corte_from_name,
 )
-from rdata.schema import CANONICAL_NAMES, DATE_COLS  # noqa: E402
+from rdata.schema import CANONICAL, CANONICAL_NAMES, DATE_COLS  # noqa: E402
 
 STG_DEFAULT = "STG_INF_CONSOL"
 
@@ -105,6 +105,14 @@ def _java_null(v):
     return v
 
 
+def _ensure_stg_table(cur, table: str, cols: list[str]) -> None:
+    """Crea STG si el reset compartido de mem:csep la borró durante la lectura R."""
+    type_by = {name: h2 for name, h2, _ora in CANONICAL}
+    lines = [f'    "{col}" {type_by.get(col, "VARCHAR")}' for col in cols]
+    body = ",\n".join(lines)
+    cur.execute(f"CREATE TABLE IF NOT EXISTS {table} (\n{body}\n)")
+
+
 def _insert_h2(conn, table: str, df: pd.DataFrame) -> int:
     if df.empty:
         return 0
@@ -113,6 +121,7 @@ def _insert_h2(conn, table: str, df: pd.DataFrame) -> int:
     col_sql = ", ".join(f'"{c}"' for c in cols)
     sql = f"INSERT INTO {table} ({col_sql}) VALUES ({placeholders})"
     cur = conn.cursor()
+    _ensure_stg_table(cur, table, cols)
     try:
         cur.execute(f"TRUNCATE TABLE {table}")
     except Exception:
